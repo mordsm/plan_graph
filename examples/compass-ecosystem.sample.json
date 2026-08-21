@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.0",
+  "state": {
+    "ecosystem_id": "compass_ecosystem",
+    "revision": 1,
+    "updated_at_utc": "2026-08-21T08:30:00Z",
+    "updated_by": "codex",
+    "lock": {
+      "mode": "optimistic",
+      "owner": null,
+      "expires_at_utc": null
+    }
+  },
+  "meta_window": {
+    "graph": {
+      "nodes": [
+        { "node_id": "compass", "node_type": "project", "label": "Compass", "project_ref": "compass", "status": "active", "position": { "x": 520, "y": 320, "pinned": true }, "tags": ["hub", "ecosystem"] },
+        { "node_id": "self_manager", "node_type": "project", "label": "Self Manager", "project_ref": "self_manager", "status": "active", "position": { "x": 320, "y": 170, "pinned": true }, "tags": ["personal", "automation"] },
+        { "node_id": "assessment", "node_type": "project", "label": "Assessment", "project_ref": "assessment", "status": "active", "position": { "x": 760, "y": 190, "pinned": true }, "tags": ["scoring", "review"] },
+        { "node_id": "administrative", "node_type": "project", "label": "Administrative", "project_ref": "administrative", "status": "idle", "position": { "x": 730, "y": 460, "pinned": true }, "tags": ["ops", "support"] }
+      ],
+      "edges": [
+        { "edge_id": "edge_compass_to_self_manager", "label": "Compass ↔ Self", "source_node": "compass", "target_node": "self_manager", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:00:00Z" },
+        { "edge_id": "edge_compass_to_assessment", "label": "Compass ↔ Assessment", "source_node": "compass", "target_node": "assessment", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:02:00Z" },
+        { "edge_id": "edge_compass_to_admin", "label": "Compass ↔ Admin", "source_node": "compass", "target_node": "administrative", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:04:00Z" },
+        { "edge_id": "edge_assessment_to_admin", "label": "Assessment → Admin", "source_node": "assessment", "target_node": "administrative", "channel_type": "webhook", "payload_format": "JSON", "protocol": "rest", "status": "healthy", "last_success_at_utc": "2026-08-21T06:05:00Z" }
+      ],
+      "layout": { "engine": "d3-force", "version": "1", "viewport": { "x": 0, "y": 0, "zoom": 1 } }
+    },
+    "health": {
+      "status": "healthy",
+      "checked_at_utc": "2026-08-21T08:30:00Z",
+      "active_projects": 4,
+      "blocked_tasks": 0,
+      "open_alerts": 0
+    },
+    "alerts": [],
+    "meta_tasks": [
+      { "project_id": "compass", "task_id": "task_surface_parts", "title": "Surface all Compass parts in the single network view", "priority": "high", "status": "in_progress" },
+      { "project_id": "self_manager", "task_id": "task_personal_loops", "title": "Keep self-manager routines synced", "priority": "medium", "status": "planned" },
+      { "project_id": "assessment", "task_id": "task_review_flow", "title": "Review assessment outputs", "priority": "medium", "status": "planned" },
+      { "project_id": "administrative", "task_id": "task_admin_cleanup", "title": "Tidy administrative workflows", "priority": "low", "status": "planned" }
+    ]
+  },
+  "projects": [
+    {
+      "identity_and_role": { "project_id": "compass", "name": "Compass", "description": "Main Compass hub for the connected ecosystem.", "role": "Coordinates self-management, assessment, and administrative parts.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [],
+        "outputs": [{ "target_node": "self_manager", "payload_format": "JSON", "protocol": "internal", "channel": "compass.to.self_manager", "required": true }],
+        "external_apis": []
+      },
+      "scheduler": { "cron_expression": null, "next_run_utc": null, "execution_type": "not_scheduled", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_surface_parts", "title": "Surface all Compass parts in the single network view", "type": "roadmap_task", "status": "in_progress", "priority": "high", "show_in_meta": true, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update compass: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "self_manager", "name": "Self Manager", "description": "Personal planning and routine assistant for Compass.", "role": "Tracks tasks, habits, and personal execution loops.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "compass", "payload_format": "JSON", "protocol": "internal", "channel": "compass.to.self_manager", "required": true }],
+        "outputs": [{ "target_node": "assessment", "payload_format": "JSON", "protocol": "internal", "channel": "self_manager.to.assessment", "required": false }],
+        "external_apis": []
+      },
+      "scheduler": { "cron_expression": "0 * * * *", "next_run_utc": "2026-08-21T09:00:00Z", "execution_type": "automated_api", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_personal_loops", "title": "Keep self-manager routines synced", "type": "roadmap_task", "status": "planned", "priority": "medium", "show_in_meta": true, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update self_manager: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "assessment", "name": "Assessment", "description": "Evaluation and scoring surface for Compass outputs.", "role": "Reviews signals and turns them into decisions and scores.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "compass", "payload_format": "JSON", "protocol": "internal", "channel": "compass.to.assessment", "required": true }],
+        "outputs": [{ "target_node": "administrative", "payload_format": "JSON", "protocol": "internal", "channel": "assessment.to.administrative", "required": false }],
+        "external_apis": []
+      },
+      "scheduler": { "cron_expression": "15 * * * *", "next_run_utc": "2026-08-21T09:15:00Z", "execution_type": "automated_api", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_review_flow", "title": "Review assessment outputs", "type": "roadmap_task", "status": "planned", "priority": "medium", "show_in_meta": true, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update assessment: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "administrative", "name": "Administrative", "description": "Operational admin layer for Compass.", "role": "Manages admin workflows, support, and cleanup.", "operational_status": "idle" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "assessment", "payload_format": "JSON", "protocol": "internal", "channel": "assessment.to.administrative", "required": false }],
+        "outputs": [],
+        "external_apis": []
+      },
+      "scheduler": { "cron_expression": "30 * * * *", "next_run_utc": "2026-08-21T09:30:00Z", "execution_type": "manual_run", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_admin_cleanup", "title": "Tidy administrative workflows", "type": "roadmap_task", "status": "planned", "priority": "low", "show_in_meta": true, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update administrative: {summary}" }
+    }
+  ]
+}

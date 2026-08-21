@@ -20,9 +20,9 @@ const el = {
   setSelect: document.getElementById("setSelect"),
   refreshButton: document.getElementById("refreshButton"),
   addProjectButton: document.getElementById("addProjectButton"),
-  compassSvg: document.getElementById("compassSvg"),
-  compassViewport: document.getElementById("compassViewport"),
-  compassTooltip: document.getElementById("compassTooltip"),
+  compassSvg: document.getElementById("graphSvg"),
+  compassViewport: document.getElementById("graphViewport"),
+  compassTooltip: document.getElementById("tooltip"),
   graphSvg: document.getElementById("graphSvg"),
   graphViewport: document.getElementById("graphViewport"),
   tooltip: document.getElementById("tooltip"),
@@ -510,9 +510,9 @@ function renderSetSwitcher() {
   const sets = state.availableSets || [];
   const switcher = el.setSelect.closest(".set-switcher");
   if (switcher) {
-    switcher.style.display = sets.length > 0 ? "flex" : "none";
+    switcher.style.display = sets.length > 1 ? "flex" : "none";
   }
-  if (!sets.length) return;
+  if (sets.length <= 1) return;
 
   el.setSelect.innerHTML = sets
     .map((item) => `<option value="${escapeHtml(item.key)}" ${item.key === state.selectedSetKey ? "selected" : ""}>${escapeHtml(item.label || item.key)}</option>`)
@@ -1241,14 +1241,23 @@ function compassPosition(node, index, width, height) {
   const cx = width / 2;
   const cy = height / 2;
   const baseRadius = Math.min(width, height) * 0.28;
-  const angleByType = {
-    external_system: Math.PI,
-    agent: -Math.PI / 2,
-    project: 0,
-  };
-  const angle = (angleByType[node.node_type] ?? Math.PI / 3) + ((index % 5) - 2) * 0.2;
-  const statusScale = node.status === "error" ? 1.25 : node.status === "idle" ? 1.02 : 0.82;
-  const radius = baseRadius * statusScale + (index % 3) * 14;
+  const orderedIds = ["self_manager", "assessment", "administrative"];
+  if (node.node_id === "compass") {
+    return {
+      x: cx,
+      y: cy,
+      cx,
+      cy,
+      radius: 0,
+    };
+  }
+
+  const manualIndex = orderedIds.indexOf(node.node_id);
+  const hash = [...String(node.node_id)].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const angle = manualIndex >= 0 ? (-Math.PI / 2) + (manualIndex * (Math.PI * 2 / orderedIds.length)) : (hash % 360) * (Math.PI / 180);
+  const statusScale = node.status === "error" ? 1.18 : node.status === "idle" ? 1.02 : 0.88;
+  const typeScale = node.node_type === "external_system" ? 0.95 : node.node_type === "agent" ? 1.02 : 1;
+  const radius = baseRadius * statusScale * typeScale + (manualIndex >= 0 ? 0 : (index % 3) * 16);
   return {
     x: cx + Math.cos(angle) * radius,
     y: cy + Math.sin(angle) * radius,
@@ -1301,8 +1310,9 @@ function renderCompassGraph() {
   layer.append("text").attr("class", "compass-label").attr("x", width - 16).attr("y", cy + 4).attr("text-anchor", "end").text("E");
   layer.append("text").attr("class", "compass-label").attr("x", cx).attr("y", height - 10).attr("text-anchor", "middle").text("S");
   layer.append("text").attr("class", "compass-label").attr("x", 16).attr("y", cy + 4).attr("text-anchor", "start").text("W");
-  layer.append("text").attr("class", "compass-center-label").attr("x", cx).attr("y", cy - 8).attr("text-anchor", "middle").text(state.server.state.ecosystem_id);
-  layer.append("text").attr("class", "compass-center-subtitle").attr("x", cx).attr("y", cy + 12).attr("text-anchor", "middle").text(`${nodes.length} nodes • ${links.length} links`);
+  const partSummary = layoutNodes.filter((node) => node.node_id !== "compass").map((node) => node.label).join(" • ");
+  layer.append("text").attr("class", "compass-center-label").attr("x", cx).attr("y", cy - 8).attr("text-anchor", "middle").text("Compass");
+  layer.append("text").attr("class", "compass-center-subtitle").attr("x", cx).attr("y", cy + 12).attr("text-anchor", "middle").text(partSummary);
 
   const edgeGroup = layer.append("g").attr("class", "compass-links").selectAll("g").data(layoutLinks, (d) => d.edge_id).join("g").attr("class", (d) => `edge-group${state.selectedEdgeId === d.edge_id ? " selected" : ""}`);
   edgeGroup
@@ -1411,7 +1421,6 @@ function render() {
   updateServerHealth();
   renderTopbar();
   renderCompassGraph();
-  renderNetworkGraph();
   if (state.draft) {
     renderDrawer();
     updatePatchPreview();

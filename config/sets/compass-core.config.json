@@ -1,9 +1,8 @@
 {
   "app_title": "Compass Ecosystem",
-  "state_source": "examples/compass-ecosystem.sample.json",
-  "storage_prefix": "compass-ecosystem",
+  "state_source": "../../examples/compass-ecosystem.sample.json",
+  "storage_prefix": "compass-core",
   "default_view": "compass-network",
   "allow_state_query_param": true,
-  "set_manifest": "sets/index.json",
   "default_set": "compass-core"
 }

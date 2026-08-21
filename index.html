@@ -37,34 +37,18 @@
       </section>
 
       <main class="workspace">
-        <section class="graph-grid">
-          <section class="graph-panel graph-panel--compass">
-            <div class="graph-panel__header">
-              <div>
-                <div class="panel-kicker">D3 Canvas</div>
-                <h2>Compass Overview</h2>
-              </div>
-              <div class="panel-hint">A quick spatial overview of the ecosystem.</div>
+        <section class="graph-panel graph-panel--compass">
+          <div class="graph-panel__header">
+            <div>
+              <div class="panel-kicker">D3 Canvas</div>
+              <h2>Compass Network</h2>
             </div>
-            <div id="compassViewport" class="graph-viewport">
-              <svg id="compassSvg" aria-label="Compass overview"></svg>
-              <div id="compassTooltip" class="tooltip" hidden></div>
-            </div>
-          </section>
-
-          <section class="graph-panel graph-panel--network">
-            <div class="graph-panel__header">
-              <div>
-                <div class="panel-kicker">D3 Canvas</div>
-                <h2>Subproject Network</h2>
-              </div>
-              <div class="panel-hint">Drag nodes, hover edges, click to inspect.</div>
-            </div>
-            <div id="graphViewport" class="graph-viewport">
-              <svg id="graphSvg" aria-label="Ecosystem graph"></svg>
-              <div id="tooltip" class="tooltip" hidden></div>
-            </div>
-          </section>
+            <div class="panel-hint">Compass center with self_manager, assessment, administrative, and connected projects.</div>
+          </div>
+          <div id="graphViewport" class="graph-viewport">
+            <svg id="graphSvg" aria-label="Compass network graph"></svg>
+            <div id="tooltip" class="tooltip" hidden></div>
+          </div>
         </section>
       </main>
 
