@@ -30,9 +30,10 @@
 html, body { width: 100%; height: 100%; margin: 0; }
 body {
   background:
-    radial-gradient(circle at 20% 0%, rgba(96, 165, 250, 0.12), transparent 32%),
-    radial-gradient(circle at 80% 0%, rgba(139, 92, 246, 0.08), transparent 28%),
-    linear-gradient(180deg, var(--bg), var(--bg-2));
+    radial-gradient(circle at 18% 0%, rgba(96, 165, 250, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 0%, rgba(139, 92, 246, 0.14), transparent 30%),
+    radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.05), transparent 42%),
+    linear-gradient(180deg, #0a1527 0%, #08111f 50%, #07111f 100%);
   color: var(--text);
   overflow: hidden;
 }
@@ -178,10 +179,12 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .graph-panel {
   height: 100%;
   min-height: 0;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(15, 26, 49, 0.92), rgba(11, 22, 40, 0.86));
-  box-shadow: var(--shadow);
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(18, 31, 57, 0.95), rgba(10, 18, 34, 0.9));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -195,7 +198,46 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
   border-bottom: 1px solid var(--line);
 }
 .graph-panel__header h2 { margin: 4px 0 0; font-size: 1.08rem; }
-.panel-hint { color: var(--muted); font-size: 0.9rem; }
+.panel-hint { color: #b7c8e6; font-size: 0.88rem; line-height: 1.45; }
+.graph-flow-summary {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.graph-flow-summary__empty {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+.flow-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  background: rgba(8, 15, 28, 0.55);
+  color: var(--text);
+  max-width: 100%;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+.flow-chip strong,
+.flow-chip span,
+.flow-chip em {
+  display: inline-block;
+  white-space: nowrap;
+}
+.flow-chip strong { color: #f8fbff; font-size: 0.8rem; }
+.flow-chip span { color: #93c5fd; font-weight: 800; }
+.flow-chip em {
+  color: #a9bddc;
+  font-style: normal;
+  font-size: 0.74rem;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+}
+.flow-chip:hover { border-color: rgba(96, 165, 250, 0.45); background: rgba(96, 165, 250, 0.12); }
 .graph-viewport {
   position: relative;
   flex: 1;
@@ -208,13 +250,13 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 }
 
 .compass-ring {
-  stroke: rgba(148, 163, 184, 0.18);
+  stroke: rgba(148, 163, 184, 0.2);
   stroke-width: 1.5px;
 }
 .compass-ring--inner { stroke: rgba(96, 165, 250, 0.26); }
 .compass-axis {
-  stroke: rgba(148, 163, 184, 0.16);
-  stroke-width: 1.1px;
+  stroke: rgba(148, 163, 184, 0.22);
+  stroke-width: 1.15px;
 }
 .compass-label,
 .compass-role-text,
@@ -427,9 +469,9 @@ body.splitter-dragging .splitter {
 .drawer__actions { display: flex; justify-content: flex-end; gap: 10px; }
 
 .node circle {
-  stroke: rgba(226, 232, 240, 0.78);
-  stroke-width: 1.4px;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.32));
+  stroke: rgba(226, 232, 240, 0.9);
+  stroke-width: 1.6px;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.32));
 }
 .node text {
   fill: var(--text);
@@ -441,8 +483,9 @@ body.splitter-dragging .splitter {
   stroke-linejoin: round;
 }
 .link-line {
-  stroke: rgba(148, 163, 184, 0.74);
-  stroke-width: 3.4px;
+  stroke: rgba(148, 163, 184, 0.88);
+  stroke-width: 4px;
+  filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.14));
 }
 .link-hit {
   stroke: transparent;
@@ -453,11 +496,12 @@ body.splitter-dragging .splitter {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  fill: #f8fbff;
+  fill: #ffffff;
   paint-order: stroke;
-  stroke: rgba(7, 17, 31, 0.95);
-  stroke-width: 6px;
+  stroke: rgba(7, 17, 31, 0.98);
+  stroke-width: 7px;
   pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 .edge-badge__title { display: block; }
 .edge-badge__meta { fill: var(--muted); font-size: 8.5px; font-weight: 600; letter-spacing: 0.04em; }

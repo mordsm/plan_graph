@@ -25,6 +25,7 @@ const el = {
   compassTooltip: document.getElementById("tooltip"),
   graphSvg: document.getElementById("graphSvg"),
   graphViewport: document.getElementById("graphViewport"),
+  graphFlowSummary: document.getElementById("graphFlowSummary"),
   tooltip: document.getElementById("tooltip"),
   splitter: document.getElementById("splitter"),
   drawer: document.getElementById("drawer"),
@@ -297,6 +298,76 @@ function normalizeNode(node) {
   };
 }
 
+function edgeSignature(edge) {
+  return [edge.source_node, edge.target_node, edge.payload_format, edge.protocol].map((part) => String(part || '').trim()).join('::');
+}
+
+function deriveProjectFlowEdges(projects = []) {
+  const edges = [];
+  const seen = new Set();
+  for (const project of projects || []) {
+    const projectId = project?.identity_and_role?.project_id;
+    if (!projectId) continue;
+    const flows = project?.interfaces_and_flows || {};
+    const outputs = Array.isArray(flows.outputs) ? flows.outputs : [];
+    const inputs = Array.isArray(flows.inputs) ? flows.inputs : [];
+    for (const flow of outputs) {
+      const target = flow?.target_node || flow?.target_project_id;
+      if (!target) continue;
+      const edge = {
+        edge_id: flow.edge_id || `derived_${projectId}_${target}_${flow.payload_format || 'JSON'}`,
+        label: flow.label || flow.payload_format || 'Flow',
+        source_node: projectId,
+        target_node: target,
+        channel_type: flow.channel_type || flow.channel || 'direct_push',
+        payload_format: flow.payload_format || 'JSON',
+        protocol: flow.protocol || 'internal',
+        status: flow.status || 'derived',
+        last_success_at_utc: flow.last_success_at_utc ?? null,
+      };
+      const sig = edgeSignature(edge);
+      if (!seen.has(sig)) {
+        seen.add(sig);
+        edges.push(edge);
+      }
+    }
+    for (const flow of inputs) {
+      const source = flow?.source_node || flow?.source_project_id;
+      if (!source) continue;
+      const edge = {
+        edge_id: flow.edge_id || `derived_${source}_${projectId}_${flow.payload_format || 'JSON'}`,
+        label: flow.label || flow.payload_format || 'Flow',
+        source_node: source,
+        target_node: projectId,
+        channel_type: flow.channel_type || flow.channel || 'direct_push',
+        payload_format: flow.payload_format || 'JSON',
+        protocol: flow.protocol || 'internal',
+        status: flow.status || 'derived',
+        last_success_at_utc: flow.last_success_at_utc ?? null,
+      };
+      const sig = edgeSignature(edge);
+      if (!seen.has(sig)) {
+        seen.add(sig);
+        edges.push(edge);
+      }
+    }
+  }
+  return edges;
+}
+
+function mergeGraphEdges(baseEdges, derivedEdges) {
+  const merged = [];
+  const seen = new Set();
+  for (const edge of [...(baseEdges || []), ...(derivedEdges || [])]) {
+    const normalized = normalizeEdge(edge);
+    const sig = edgeSignature(normalized);
+    if (seen.has(sig)) continue;
+    seen.add(sig);
+    merged.push(normalized);
+  }
+  return merged;
+}
+
 function normalizeEdge(edge) {
   return {
     edge_id: edge.edge_id || uuid("edge"),
@@ -316,6 +387,33 @@ function formatEdgeBadge(edge) {
   const parts = [edge.payload_format, edge.channel_type, edge.protocol].filter(Boolean);
   const meta = [...new Set(parts)].join(" • ");
   return { title, meta: meta || edge.status || "flow" };
+}
+
+function renderGraphFlowSummary(links = []) {
+  if (!el.graphFlowSummary) return;
+  if (!links.length) {
+    el.graphFlowSummary.innerHTML = '<span class="graph-flow-summary__empty">No connection data found.</span>';
+    return;
+  }
+  const items = links.slice(0, 10).map((link) => {
+    const badge = formatEdgeBadge(link);
+    const label = badge.meta || link.status || 'flow';
+    return `
+      <button class="flow-chip" data-edge-id="${escapeHtml(link.edge_id)}" title="${escapeHtml(badge.title)}">
+        <strong>${escapeHtml(link.source_node)}</strong>
+        <span>→</span>
+        <strong>${escapeHtml(link.target_node)}</strong>
+        <em>${escapeHtml(label)}</em>
+      </button>
+    `;
+  }).join('');
+  el.graphFlowSummary.innerHTML = items;
+  el.graphFlowSummary.querySelectorAll('.flow-chip').forEach((button) => {
+    button.addEventListener('click', () => {
+      const edgeId = button.dataset.edgeId;
+      if (edgeId) openEdgeDrawer(edgeId);
+    });
+  });
 }
 
 function getProjectNodeRef(project) {
@@ -1441,6 +1539,20 @@ function getNodeColor(node) {
   return getComputedStyle(document.documentElement).getPropertyValue("--project").trim();
 }
 
+function getEdgeColor(edge) {
+  if (edge.status === "critical") return getComputedStyle(document.documentElement).getPropertyValue("--bad").trim();
+  if (edge.status === "degraded") return getComputedStyle(document.documentElement).getPropertyValue("--warn").trim();
+  if (edge.status === "derived") return getComputedStyle(document.documentElement).getPropertyValue("--accent-2").trim();
+  if (edge.status === "healthy") return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  return getComputedStyle(document.documentElement).getPropertyValue("--line-strong").trim();
+}
+
+function getEdgeDash(edge) {
+  if (edge.status === "derived") return "7 6";
+  if (edge.channel_type === "scheduled_pull") return "4 5";
+  return null;
+}
+
 function ensureGraphDimensions(viewportEl) {
   const rect = viewportEl.getBoundingClientRect();
   return {
@@ -1450,10 +1562,11 @@ function ensureGraphDimensions(viewportEl) {
 }
 
 function getGraphData() {
-  return {
-    nodes: state.server.meta_window.graph.nodes.map(normalizeNode),
-    links: state.server.meta_window.graph.edges.map(normalizeEdge),
-  };
+  const nodes = state.server.meta_window.graph.nodes.map(normalizeNode);
+  const baseEdges = Array.isArray(state.server.meta_window.graph.edges) ? state.server.meta_window.graph.edges : [];
+  const derivedEdges = deriveProjectFlowEdges(state.server.projects);
+  const links = mergeGraphEdges(baseEdges, derivedEdges);
+  return { nodes, links };
 }
 
 function renderNetworkGraph() {
@@ -1492,7 +1605,9 @@ function renderNetworkGraph() {
   linkGroup
     .append("line")
     .attr("class", "link-line")
-    .attr("marker-end", "url(#arrowhead)");
+    .attr("marker-end", "url(#arrowhead)")
+    .attr("stroke", (d) => getEdgeColor(d))
+    .attr("stroke-dasharray", (d) => getEdgeDash(d));
 
   linkGroup
     .append("line")
@@ -1643,6 +1758,7 @@ function renderCompassGraph() {
   if (!state.server || !el.compassSvg || !el.compassViewport) return;
   const { width, height } = ensureGraphDimensions(el.compassViewport);
   const { nodes, links } = getGraphData();
+  renderGraphFlowSummary(links);
   const layoutNodes = nodes.map((node, index) => ({ ...node, ...compassPosition(node, index, width, height) }));
   layoutNodes.forEach((node) => {
     node.fx = node.x;
