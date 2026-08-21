@@ -444,6 +444,7 @@ function selectSection(section) {
     button.classList.toggle("active", button.dataset.section === section);
   });
   [...el.drawerBody.querySelectorAll(".section-card")].forEach((sectionEl) => {
+    if (!PROJECT_SECTIONS.includes(sectionEl.dataset.section)) return;
     sectionEl.classList.toggle("active", sectionEl.dataset.section === section);
   });
 }
@@ -546,6 +547,10 @@ function renderDrawerProject(project, mode = "edit") {
   const scheduler = project.scheduler;
   const roadmap = project.roadmap_and_tasks;
   const exportCommit = project.export_and_commit;
+  const overview = getGlobalOverview();
+  const overviewSteps = overview.next_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
+  const apiCards = flows.external_apis.length ? flows.external_apis.map((api) => formatApiCard(api)).join("") : `<div class="empty-note">No external APIs configured yet.</div>`;
+  const taskSummaryCards = roadmap.length ? roadmap.map((task) => formatTaskSummary(task)).join("") : `<div class="empty-note">No roadmap items yet.</div>`;
   const taskRows = roadmap
     .map(
       (task, index) => `
@@ -576,6 +581,27 @@ function renderDrawerProject(project, mode = "edit") {
     .join("");
 
   el.drawerBody.innerHTML = `
+    <section class="section-card section-card--overview active" data-section="overview">
+      <div class="overview-top">
+        <div>
+          <div class="panel-kicker">Project Overview</div>
+          <h3>Whole-project status</h3>
+        </div>
+        <div class="overview-status" data-health="${escapeHtml(overview.status)}">${escapeHtml(overview.status)}</div>
+      </div>
+      <p class="overview-summary">${escapeHtml(overview.summary)}</p>
+      <div class="overview-grid">
+        <div>
+          <div class="overview-label">Document</div>
+          <a class="doc-link" href="${escapeHtml(overview.document_url)}" target="_blank" rel="noreferrer">${escapeHtml(overview.document_url)}</a>
+        </div>
+        <div>
+          <div class="overview-label">Next steps</div>
+          <ul class="overview-steps">${overviewSteps}</ul>
+        </div>
+      </div>
+    </section>
+
     <section class="section-card active" data-section="identity_and_role">
       <div class="form-grid">
         <div class="field">
@@ -627,6 +653,7 @@ function renderDrawerProject(project, mode = "edit") {
         </div>
       </div>
       <div class="array-note">Tip: each line accepts JSON objects for fast import/export.</div>
+      <div class="api-list">${apiCards}</div>
     </section>
 
     <section class="section-card" data-section="scheduler">
@@ -655,6 +682,7 @@ function renderDrawerProject(project, mode = "edit") {
 
     <section class="section-card" data-section="roadmap_and_tasks">
       <div class="array-note">Inline task editing: status, priority, title, and show_in_meta.</div>
+      <div class="task-summary">${taskSummaryCards}</div>
       <div class="task-list" id="taskList">${taskRows}</div>
       <div style="margin-top: 10px;">
         <button class="inline-button" type="button" id="addTaskButton">Add Task</button>
@@ -1030,6 +1058,47 @@ function draftValidationErrors() {
   return errors;
 }
 
+function getGlobalOverview() {
+  const fallbackSteps = [
+    "Keep the financial ingestion chain healthy: Isracard Mail → Mail Manager → Economic Manager.",
+    "Keep the Compass hub balanced across finance and non-finance subprojects.",
+    "Open any project or edge to update its roadmap, APIs, and commit template.",
+  ];
+  const overview = state.server?.meta_window?.overview || {};
+  return {
+    status: overview.status || state.server?.meta_window?.health?.status || "unknown",
+    summary:
+      overview.summary ||
+      "Compass is the active hub for both financial and non-financial subprojects. Use the drawer to update project details, APIs, roadmap items, and commit instructions.",
+    next_steps: Array.isArray(overview.next_steps) && overview.next_steps.length ? overview.next_steps : fallbackSteps,
+    document_url: overview.document_url || "docs/project-overview.md",
+  };
+}
+
+function formatApiCard(api) {
+  const name = api.endpoint_name || api.name || "API";
+  const trigger = api.trigger_mode ? `trigger: ${api.trigger_mode}` : null;
+  const auth = api.auth_requirements ? `auth: ${api.auth_requirements}` : null;
+  const base = api.base_url ? `base: ${api.base_url}` : null;
+  const rate = api.rate_limit ? `rate: ${api.rate_limit}` : null;
+  return `
+    <div class="api-card">
+      <strong>${escapeHtml(name)}</strong>
+      <div class="api-card__meta">${[base, trigger, auth, rate].filter(Boolean).map(escapeHtml).join(" · ") || "No details provided."}</div>
+    </div>
+  `;
+}
+
+function formatTaskSummary(task) {
+  const extras = [task.priority, task.due_at_utc ? `due ${task.due_at_utc}` : null, task.blocked_reason ? `blocked: ${task.blocked_reason}` : null].filter(Boolean).join(" · ");
+  return `
+    <div class="task-summary-item task-summary-item--${escapeHtml(task.status || "planned")}">
+      <strong>${escapeHtml(task.title)}</strong>
+      <div>${escapeHtml(extras || task.status || "planned")}</div>
+    </div>
+  `;
+}
+
 function openProjectDrawer(projectId) {
   const index = findProjectIndex(projectId);
   if (index < 0) return;
@@ -1283,6 +1352,10 @@ function renderCompassGraph() {
   const { width, height } = ensureGraphDimensions(el.compassViewport);
   const { nodes, links } = getGraphData();
   const layoutNodes = nodes.map((node, index) => ({ ...node, ...compassPosition(node, index, width, height) }));
+  layoutNodes.forEach((node) => {
+    node.fx = node.x;
+    node.fy = node.y;
+  });
   const layoutMap = new Map(layoutNodes.map((node) => [node.node_id, node]));
   const layoutLinks = links
     .map((link) => ({ ...link, source: layoutMap.get(link.source_node), target: layoutMap.get(link.target_node) }))

@@ -13,6 +13,7 @@ A schema-driven D3 ecosystem hub for the `plan_graph` repo.
 - `src/types.ts`: TypeScript interfaces, empty-project factory, and meta-task derivation helper.
 - `examples/compas-ecosystem.sample.json`: sample ecosystem state.
 - `docs/hermes-component-api-spec.md`: component, API, and state-management spec for Hermes.
+- `docs/project-overview.md`: live Compass project status, next steps, and edit guidance.
 
 ## Core model
 

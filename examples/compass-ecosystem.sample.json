@@ -34,6 +34,17 @@
       ],
       "layout": { "engine": "d3-force", "version": "1", "viewport": { "x": 0, "y": 0, "zoom": 1 } }
     },
+    "overview": {
+      "status": "degraded",
+      "summary": "Compass currently spans both financial and non-financial subprojects. The financial chain is visible from Isracard Mail through Economic Manager, while the non-financial parts stay in the same canvas.",
+      "next_steps": [
+        "Keep the financial ingestion chain visible and healthy.",
+        "Keep non-financial subprojects visible in the same Compass canvas.",
+        "Update each project's roadmap and APIs when behavior changes.",
+        "Use edge labels to describe what data moves between projects."
+      ],
+      "document_url": "docs/project-overview.md"
+    },
     "health": {
       "status": "degraded",
       "checked_at_utc": "2026-08-21T11:20:00Z",
