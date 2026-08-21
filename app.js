@@ -1241,29 +1241,34 @@ function compassPosition(node, index, width, height) {
   const cx = width / 2;
   const cy = height / 2;
   const baseRadius = Math.min(width, height) * 0.28;
-  const orderedIds = ["self_manager", "assessment", "administrative"];
+  const manualAngles = {
+    self_manager: (-135 * Math.PI) / 180,
+    assessment: (-35 * Math.PI) / 180,
+    administrative: (95 * Math.PI) / 180,
+  };
+  const manualRadiusScale = {
+    self_manager: 0.96,
+    assessment: 0.94,
+    administrative: 0.97,
+  };
+
   if (node.node_id === "compass") {
-    return {
-      x: cx,
-      y: cy,
-      cx,
-      cy,
-      radius: 0,
-    };
+    return { x: cx, y: cy, cx, cy, radius: 0, angle: 0 };
   }
 
-  const manualIndex = orderedIds.indexOf(node.node_id);
   const hash = [...String(node.node_id)].reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const angle = manualIndex >= 0 ? (-Math.PI / 2) + (manualIndex * (Math.PI * 2 / orderedIds.length)) : (hash % 360) * (Math.PI / 180);
+  const isManual = Object.prototype.hasOwnProperty.call(manualAngles, node.node_id);
+  const angle = isManual ? manualAngles[node.node_id] : (hash % 360) * (Math.PI / 180);
   const statusScale = node.status === "error" ? 1.18 : node.status === "idle" ? 1.02 : 0.88;
   const typeScale = node.node_type === "external_system" ? 0.95 : node.node_type === "agent" ? 1.02 : 1;
-  const radius = baseRadius * statusScale * typeScale + (manualIndex >= 0 ? 0 : (index % 3) * 16);
+  const radius = baseRadius * statusScale * typeScale * (isManual ? manualRadiusScale[node.node_id] : 1) + (isManual ? 0 : (index % 4) * 16);
   return {
     x: cx + Math.cos(angle) * radius,
     y: cy + Math.sin(angle) * radius,
     cx,
     cy,
     radius,
+    angle,
   };
 }
 
@@ -1310,7 +1315,43 @@ function renderCompassGraph() {
   layer.append("text").attr("class", "compass-label").attr("x", width - 16).attr("y", cy + 4).attr("text-anchor", "end").text("E");
   layer.append("text").attr("class", "compass-label").attr("x", cx).attr("y", height - 10).attr("text-anchor", "middle").text("S");
   layer.append("text").attr("class", "compass-label").attr("x", 16).attr("y", cy + 4).attr("text-anchor", "start").text("W");
-  const partSummary = layoutNodes.filter((node) => node.node_id !== "compass").map((node) => node.label).join(" • ");
+  const compassParts = [
+    { id: "self_manager", label: "Self Manager", angle: (-135 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "assessment", label: "Assessment", angle: (-35 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "administrative", label: "Administrative", angle: (95 * Math.PI) / 180, r: maxRadius * 1.02 },
+  ];
+  const partSummary = compassParts
+    .filter((part) => layoutMap.has(part.id))
+    .map((part) => part.label)
+    .join(" • ");
+
+  layer
+    .append("g")
+    .attr("class", "compass-role-labels")
+    .selectAll("g")
+    .data(compassParts.filter((part) => layoutMap.has(part.id)))
+    .join("g")
+    .attr("class", "compass-role-label")
+    .each(function (part) {
+      const g = d3.select(this);
+      const x = cx + Math.cos(part.angle) * part.r;
+      const y = cy + Math.sin(part.angle) * part.r;
+      g.append("line")
+        .attr("class", "compass-role-line")
+        .attr("x1", cx)
+        .attr("y1", cy)
+        .attr("x2", x)
+        .attr("y2", y)
+        .attr("stroke-dasharray", "6 6");
+      g.append("circle").attr("class", "compass-role-dot").attr("cx", x).attr("cy", y).attr("r", 4);
+      g.append("text")
+        .attr("class", "compass-role-text")
+        .attr("x", x)
+        .attr("y", y - 10)
+        .attr("text-anchor", Math.cos(part.angle) >= 0 ? "start" : "end")
+        .text(part.label);
+    });
+
   layer.append("text").attr("class", "compass-center-label").attr("x", cx).attr("y", cy - 8).attr("text-anchor", "middle").text("Compass");
   layer.append("text").attr("class", "compass-center-subtitle").attr("x", cx).attr("y", cy + 12).attr("text-anchor", "middle").text(partSummary);
 
