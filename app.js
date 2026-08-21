@@ -1242,14 +1242,20 @@ function compassPosition(node, index, width, height) {
   const cy = height / 2;
   const baseRadius = Math.min(width, height) * 0.28;
   const manualAngles = {
-    self_manager: (-135 * Math.PI) / 180,
-    assessment: (-35 * Math.PI) / 180,
-    administrative: (95 * Math.PI) / 180,
+    isracard_mail: (200 * Math.PI) / 180,
+    mail_manager: (150 * Math.PI) / 180,
+    economic_manager: (235 * Math.PI) / 180,
+    self_manager: (325 * Math.PI) / 180,
+    assessment: (20 * Math.PI) / 180,
+    administrative: (110 * Math.PI) / 180,
   };
   const manualRadiusScale = {
-    self_manager: 0.96,
-    assessment: 0.94,
-    administrative: 0.97,
+    isracard_mail: 1.02,
+    mail_manager: 0.98,
+    economic_manager: 1.0,
+    self_manager: 0.98,
+    assessment: 0.96,
+    administrative: 0.98,
   };
 
   if (node.node_id === "compass") {
@@ -1316,12 +1322,19 @@ function renderCompassGraph() {
   layer.append("text").attr("class", "compass-label").attr("x", cx).attr("y", height - 10).attr("text-anchor", "middle").text("S");
   layer.append("text").attr("class", "compass-label").attr("x", 16).attr("y", cy + 4).attr("text-anchor", "start").text("W");
   const compassParts = [
-    { id: "self_manager", label: "Self Manager", angle: (-135 * Math.PI) / 180, r: maxRadius * 1.02 },
-    { id: "assessment", label: "Assessment", angle: (-35 * Math.PI) / 180, r: maxRadius * 1.02 },
-    { id: "administrative", label: "Administrative", angle: (95 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "isracard_mail", label: "Isracard Mail", angle: (200 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "mail_manager", label: "Mail Manager", angle: (150 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "economic_manager", label: "Economic Manager", angle: (235 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "self_manager", label: "Self Manager", angle: (325 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "assessment", label: "Assessment", angle: (20 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "administrative", label: "Administrative", angle: (110 * Math.PI) / 180, r: maxRadius * 1.02 },
   ];
-  const partSummary = compassParts
-    .filter((part) => layoutMap.has(part.id))
+  const financeSummary = compassParts
+    .filter((part) => ["isracard_mail", "mail_manager", "economic_manager"].includes(part.id) && layoutMap.has(part.id))
+    .map((part) => part.label)
+    .join(" • ");
+  const nonFinanceSummary = compassParts
+    .filter((part) => ["self_manager", "assessment", "administrative"].includes(part.id) && layoutMap.has(part.id))
     .map((part) => part.label)
     .join(" • ");
 
@@ -1352,8 +1365,9 @@ function renderCompassGraph() {
         .text(part.label);
     });
 
-  layer.append("text").attr("class", "compass-center-label").attr("x", cx).attr("y", cy - 8).attr("text-anchor", "middle").text("Compass");
-  layer.append("text").attr("class", "compass-center-subtitle").attr("x", cx).attr("y", cy + 12).attr("text-anchor", "middle").text(partSummary);
+  layer.append("text").attr("class", "compass-center-label").attr("x", cx).attr("y", cy - 12).attr("text-anchor", "middle").text("Compass");
+  layer.append("text").attr("class", "compass-center-subtitle").attr("x", cx).attr("y", cy + 10).attr("text-anchor", "middle").text(`Finance: ${financeSummary}`);
+  layer.append("text").attr("class", "compass-center-subtitle").attr("x", cx).attr("y", cy + 26).attr("text-anchor", "middle").text(`Non-finance: ${nonFinanceSummary}`);
 
   const edgeGroup = layer.append("g").attr("class", "compass-links").selectAll("g").data(layoutLinks, (d) => d.edge_id).join("g").attr("class", (d) => `edge-group${state.selectedEdgeId === d.edge_id ? " selected" : ""}`);
   edgeGroup

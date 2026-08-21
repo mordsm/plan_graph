@@ -2,8 +2,8 @@
   "schema_version": "1.0.0",
   "state": {
     "ecosystem_id": "compass_ecosystem",
-    "revision": 1,
-    "updated_at_utc": "2026-08-21T08:30:00Z",
+    "revision": 8,
+    "updated_at_utc": "2026-08-21T11:20:00Z",
     "updated_by": "codex",
     "lock": {
       "mode": "optimistic",
@@ -14,29 +14,46 @@
   "meta_window": {
     "graph": {
       "nodes": [
-        { "node_id": "compass", "node_type": "project", "label": "Compass", "project_ref": "compass", "status": "active", "position": { "x": 520, "y": 320, "pinned": true }, "tags": ["hub", "ecosystem"] },
-        { "node_id": "self_manager", "node_type": "project", "label": "Self Manager", "project_ref": "self_manager", "status": "active", "position": { "x": 320, "y": 170, "pinned": true }, "tags": ["personal", "automation"] },
-        { "node_id": "assessment", "node_type": "project", "label": "Assessment", "project_ref": "assessment", "status": "active", "position": { "x": 760, "y": 190, "pinned": true }, "tags": ["scoring", "review"] },
-        { "node_id": "administrative", "node_type": "project", "label": "Administrative", "project_ref": "administrative", "status": "idle", "position": { "x": 730, "y": 460, "pinned": true }, "tags": ["ops", "support"] }
+        { "node_id": "isracard_mail", "node_type": "external_system", "label": "Isracard Mail", "project_ref": "isracard_mail", "status": "active", "position": { "x": 80, "y": 180, "pinned": true }, "tags": ["mail", "source", "finance"] },
+        { "node_id": "mail_manager", "node_type": "agent", "label": "Mail Manager", "project_ref": "mail_manager", "status": "active", "position": { "x": 240, "y": 180, "pinned": true }, "tags": ["parser", "worker", "finance"] },
+        { "node_id": "economic_manager", "node_type": "project", "label": "Economic Manager", "project_ref": "economic_manager", "status": "active", "position": { "x": 420, "y": 180, "pinned": true }, "tags": ["finance", "normalizer"] },
+        { "node_id": "compass", "node_type": "project", "label": "Compass", "project_ref": "compass", "status": "active", "position": { "x": 620, "y": 300, "pinned": true }, "tags": ["hub", "ecosystem"] },
+        { "node_id": "self_manager", "node_type": "project", "label": "Self Manager", "project_ref": "self_manager", "status": "active", "position": { "x": 240, "y": 440, "pinned": true }, "tags": ["personal", "automation", "non-finance"] },
+        { "node_id": "assessment", "node_type": "project", "label": "Assessment", "project_ref": "assessment", "status": "active", "position": { "x": 460, "y": 120, "pinned": true }, "tags": ["scoring", "review", "non-finance"] },
+        { "node_id": "administrative", "node_type": "project", "label": "Administrative", "project_ref": "administrative", "status": "idle", "position": { "x": 560, "y": 460, "pinned": true }, "tags": ["ops", "support", "non-finance"] }
       ],
       "edges": [
-        { "edge_id": "edge_compass_to_self_manager", "label": "Compass ↔ Self", "source_node": "compass", "target_node": "self_manager", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:00:00Z" },
-        { "edge_id": "edge_compass_to_assessment", "label": "Compass ↔ Assessment", "source_node": "compass", "target_node": "assessment", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:02:00Z" },
-        { "edge_id": "edge_compass_to_admin", "label": "Compass ↔ Admin", "source_node": "compass", "target_node": "administrative", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:04:00Z" },
-        { "edge_id": "edge_assessment_to_admin", "label": "Assessment → Admin", "source_node": "assessment", "target_node": "administrative", "channel_type": "webhook", "payload_format": "JSON", "protocol": "rest", "status": "healthy", "last_success_at_utc": "2026-08-21T06:05:00Z" }
+        { "edge_id": "edge_isracard_to_mail_manager", "label": "Statement.Email", "source_node": "isracard_mail", "target_node": "mail_manager", "channel_type": "scheduled_pull", "payload_format": "EMAIL", "protocol": "imap", "status": "healthy", "last_success_at_utc": "2026-08-21T06:00:00Z" },
+        { "edge_id": "edge_mail_manager_to_economic_manager", "label": "Statement.CSV", "source_node": "mail_manager", "target_node": "economic_manager", "channel_type": "direct_push", "payload_format": "CSV", "protocol": "filesystem", "status": "healthy", "last_success_at_utc": "2026-08-21T06:02:00Z" },
+        { "edge_id": "edge_economic_manager_to_compass", "label": "REST JSON", "source_node": "economic_manager", "target_node": "compass", "channel_type": "webhook", "payload_format": "REST_JSON", "protocol": "rest", "status": "degraded", "last_success_at_utc": "2026-08-20T18:45:00Z" },
+        { "edge_id": "edge_compass_to_self_manager", "label": "Compass ↔ Self", "source_node": "compass", "target_node": "self_manager", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:10:00Z" },
+        { "edge_id": "edge_compass_to_assessment", "label": "Compass ↔ Assessment", "source_node": "compass", "target_node": "assessment", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:12:00Z" },
+        { "edge_id": "edge_compass_to_admin", "label": "Compass ↔ Admin", "source_node": "compass", "target_node": "administrative", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:14:00Z" },
+        { "edge_id": "edge_self_to_assessment", "label": "Self → Assessment", "source_node": "self_manager", "target_node": "assessment", "channel_type": "direct_push", "payload_format": "JSON", "protocol": "internal", "status": "healthy", "last_success_at_utc": "2026-08-21T06:15:00Z" },
+        { "edge_id": "edge_assessment_to_admin", "label": "Assessment → Admin", "source_node": "assessment", "target_node": "administrative", "channel_type": "webhook", "payload_format": "JSON", "protocol": "rest", "status": "healthy", "last_success_at_utc": "2026-08-21T06:16:00Z" }
       ],
       "layout": { "engine": "d3-force", "version": "1", "viewport": { "x": 0, "y": 0, "zoom": 1 } }
     },
     "health": {
-      "status": "healthy",
-      "checked_at_utc": "2026-08-21T08:30:00Z",
-      "active_projects": 4,
-      "blocked_tasks": 0,
-      "open_alerts": 0
+      "status": "degraded",
+      "checked_at_utc": "2026-08-21T11:20:00Z",
+      "active_projects": 6,
+      "blocked_tasks": 1,
+      "open_alerts": 1
     },
-    "alerts": [],
+    "alerts": [
+      {
+        "alert_id": "alert_compass_webhook_delay",
+        "severity": "warning",
+        "source_node": "compass",
+        "message": "Compass import webhook has not acknowledged the latest Economic Manager payload.",
+        "created_at_utc": "2026-08-21T08:15:00Z",
+        "status": "open"
+      }
+    ],
     "meta_tasks": [
-      { "project_id": "compass", "task_id": "task_surface_parts", "title": "Surface all Compass parts in the single network view", "priority": "high", "status": "in_progress" },
+      { "project_id": "economic_manager", "task_id": "task_reconcile_csv_schema", "title": "Reconcile Isracard CSV columns before Compass sync", "priority": "urgent", "status": "blocked" },
+      { "project_id": "compass", "task_id": "task_show_last_import_health", "title": "Expose last import health badge in Compass", "priority": "high", "status": "planned" },
       { "project_id": "self_manager", "task_id": "task_personal_loops", "title": "Keep self-manager routines synced", "priority": "medium", "status": "planned" },
       { "project_id": "assessment", "task_id": "task_review_flow", "title": "Review assessment outputs", "priority": "medium", "status": "planned" },
       { "project_id": "administrative", "task_id": "task_admin_cleanup", "title": "Tidy administrative workflows", "priority": "low", "status": "planned" }
@@ -44,14 +61,47 @@
   },
   "projects": [
     {
-      "identity_and_role": { "project_id": "compass", "name": "Compass", "description": "Main Compass hub for the connected ecosystem.", "role": "Coordinates self-management, assessment, and administrative parts.", "operational_status": "active" },
+      "identity_and_role": { "project_id": "isracard_mail", "name": "Isracard Mail", "description": "External mailbox containing card statements and transaction notifications.", "role": "Source system for card statement ingestion.", "operational_status": "active" },
       "interfaces_and_flows": {
         "inputs": [],
-        "outputs": [{ "target_node": "self_manager", "payload_format": "JSON", "protocol": "internal", "channel": "compass.to.self_manager", "required": true }],
+        "outputs": [{ "target_node": "mail_manager", "payload_format": "EMAIL", "protocol": "imap", "channel": "inbox:isracard", "required": true }],
+        "external_apis": [{ "endpoint_name": "Gmail IMAP", "base_url": null, "trigger_mode": "scheduled", "auth_requirements": "OAuth token; may require 2FA prompt during reauthorization.", "rate_limit": null }]
+      },
+      "scheduler": { "cron_expression": "0 */6 * * *", "next_run_utc": "2026-08-21T12:00:00Z", "execution_type": "automated_api", "requires_manual_login": true, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_refresh_mail_token", "title": "Verify long-lived mailbox OAuth refresh", "type": "api_job", "status": "planned", "priority": "medium", "show_in_meta": false, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update isracard_mail: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "mail_manager", "name": "Mail Manager", "description": "Agent that fetches relevant messages, extracts attachments, and normalizes statement artifacts.", "role": "Transforms mailbox events into structured statement files.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "isracard_mail", "payload_format": "EMAIL", "protocol": "imap", "channel": "inbox:isracard", "required": true }],
+        "outputs": [{ "target_node": "economic_manager", "payload_format": "CSV", "protocol": "filesystem", "channel": "data/isracard/statements", "required": true }],
+        "external_apis": []
+      },
+      "scheduler": { "cron_expression": "5 */6 * * *", "next_run_utc": "2026-08-21T12:05:00Z", "execution_type": "local_worker", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_attachment_fingerprint", "title": "Add duplicate attachment fingerprinting", "type": "roadmap_task", "status": "in_progress", "priority": "medium", "show_in_meta": false, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update mail_manager: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "economic_manager", "name": "Economic Manager", "description": "Finance normalization service that reconciles statements, categories, and account-level views.", "role": "Converts raw statement exports into canonical financial JSON for downstream systems.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "mail_manager", "payload_format": "CSV", "protocol": "filesystem", "channel": "data/isracard/statements", "required": true }],
+        "outputs": [{ "target_node": "compass", "payload_format": "REST_JSON", "protocol": "rest", "channel": "/api/imports/economic-manager", "required": true }],
+        "external_apis": [{ "endpoint_name": "Compass Import API", "base_url": "https://compass.local/api/imports/economic-manager", "trigger_mode": "event", "auth_requirements": "Service token stored outside schema; no manual login.", "rate_limit": "60 requests/minute" }]
+      },
+      "scheduler": { "cron_expression": "10 */6 * * *", "next_run_utc": "2026-08-21T12:10:00Z", "execution_type": "automated_api", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_reconcile_csv_schema", "title": "Reconcile Isracard CSV columns before Compass sync", "type": "api_job", "status": "blocked", "priority": "urgent", "show_in_meta": true, "blocked_reason": "Latest CSV export contains a new merchant_reference column not yet mapped.", "due_at_utc": "2026-08-22T12:00:00Z" }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": [{ "op": "replace", "path": "/projects/2/roadmap_and_tasks/0/status", "value": "blocked" }], "commit_message_template": "Update economic_manager: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "compass", "name": "Compass", "description": "Main hub for both financial and non-financial Compass subprojects.", "role": "Coordinates financial ingestion plus self-management, assessment, and administrative parts.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "economic_manager", "payload_format": "REST_JSON", "protocol": "rest", "channel": "/api/imports/economic-manager", "required": true }],
+        "outputs": [],
         "external_apis": []
       },
       "scheduler": { "cron_expression": null, "next_run_utc": null, "execution_type": "not_scheduled", "requires_manual_login": false, "timezone": "UTC" },
-      "roadmap_and_tasks": [{ "task_id": "task_surface_parts", "title": "Surface all Compass parts in the single network view", "type": "roadmap_task", "status": "in_progress", "priority": "high", "show_in_meta": true, "blocked_reason": null, "due_at_utc": null }],
+      "roadmap_and_tasks": [{ "task_id": "task_show_last_import_health", "title": "Expose last import health badge in Compass", "type": "roadmap_task", "status": "planned", "priority": "high", "show_in_meta": true, "blocked_reason": null, "due_at_utc": null }],
       "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update compass: {summary}" }
     },
     {
