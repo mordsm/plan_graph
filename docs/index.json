@@ -1,0 +1,17 @@
+{
+  "default_doc": "docs/project-overview.md",
+  "docs": [
+    {
+      "path": "docs/hermes-component-api-spec.md",
+      "label": "Hermes Component Api Spec"
+    },
+    {
+      "path": "docs/project-overview.md",
+      "label": "Project Overview"
+    },
+    {
+      "path": "README.md",
+      "label": "README"
+    }
+  ]
+}

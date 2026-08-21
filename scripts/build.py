@@ -22,7 +22,26 @@ def copy_tree(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
 
 
+def build_docs_index() -> dict:
+    docs = []
+    for path in sorted(ROOT.rglob("*.md")):
+        if DIST in path.parents:
+            continue
+        rel = path.relative_to(ROOT).as_posix()
+        label = path.stem.replace("-", " ").replace("_", " ").strip().title()
+        if path.name.lower() == "readme.md":
+            label = "README"
+        docs.append({"path": rel, "label": label})
+    index = {
+        "default_doc": "docs/project-overview.md",
+        "docs": docs,
+    }
+    (ROOT / "docs" / "index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
+    return index
+
+
 def build() -> dict:
+    build_docs_index()
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True, exist_ok=True)

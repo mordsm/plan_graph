@@ -14,6 +14,7 @@ A schema-driven D3 ecosystem hub for the `plan_graph` repo.
 - `examples/compas-ecosystem.sample.json`: sample ecosystem state.
 - `docs/hermes-component-api-spec.md`: component, API, and state-management spec for Hermes.
 - `docs/project-overview.md`: live Compass project status, next steps, and edit guidance.
+- `docs/index.json`: manifest of all markdown docs exposed in the UI.
 
 ## Core model
 

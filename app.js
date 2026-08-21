@@ -61,6 +61,12 @@ const state = {
   graphReady: false,
   sourceUrl: null,
   storageKey: null,
+  docsManifest: null,
+  docsContentByPath: {},
+  selectedDocPath: null,
+  docDraft: "",
+  docsFolderHandle: null,
+  docsFileHandles: {},
 };
 
 const PROJECT_SECTIONS = [
@@ -68,6 +74,7 @@ const PROJECT_SECTIONS = [
   "interfaces_and_flows",
   "scheduler",
   "roadmap_and_tasks",
+  "docs",
   "export_and_commit",
 ];
 
@@ -551,6 +558,20 @@ function renderDrawerProject(project, mode = "edit") {
   const overviewSteps = overview.next_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
   const apiCards = flows.external_apis.length ? flows.external_apis.map((api) => formatApiCard(api)).join("") : `<div class="empty-note">No external APIs configured yet.</div>`;
   const taskSummaryCards = roadmap.length ? roadmap.map((task) => formatTaskSummary(task)).join("") : `<div class="empty-note">No roadmap items yet.</div>`;
+  const docEntries = getDocEntries();
+  const selectedDocPath = getSelectedDocPath();
+  const selectedDoc = docEntries.find((doc) => doc.path === selectedDocPath) || docEntries[0] || { path: selectedDocPath, label: selectedDocPath, description: "" };
+  const docSourceText = getDocSourceText(selectedDocPath);
+  const docList = docEntries
+    .map(
+      (doc) => `
+        <button class="doc-list-item${doc.path === selectedDocPath ? " active" : ""}" type="button" data-doc-select="${escapeHtml(doc.path)}">
+          <strong>${escapeHtml(doc.label)}</strong>
+          <span>${escapeHtml(doc.path)}</span>
+        </button>
+      `,
+    )
+    .join("");
   const taskRows = roadmap
     .map(
       (task, index) => `
@@ -594,10 +615,50 @@ function renderDrawerProject(project, mode = "edit") {
         <div>
           <div class="overview-label">Document</div>
           <a class="doc-link" href="${escapeHtml(overview.document_url)}" target="_blank" rel="noreferrer">${escapeHtml(overview.document_url)}</a>
+          <div style="margin-top: 8px;">
+            <button class="inline-button" type="button" data-doc-action="open-overview">Edit document</button>
+          </div>
         </div>
         <div>
           <div class="overview-label">Next steps</div>
           <ul class="overview-steps">${overviewSteps}</ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" data-section="docs">
+      <div class="docs-shell">
+        <div class="docs-sidebar">
+          <div class="docs-header-row">
+            <div>
+              <div class="panel-kicker">Markdown docs</div>
+              <h3>All project documents</h3>
+            </div>
+            <button class="inline-button" type="button" data-doc-action="connect-folder">Connect folder</button>
+          </div>
+          <div class="docs-note">Choose any MD file, edit it here, and save it back to disk when a writable folder is connected.</div>
+          <div class="docs-list">${docList}</div>
+        </div>
+        <div class="docs-editor">
+          <div class="form-grid">
+            <div class="field full">
+              <label>Document path</label>
+              <input value="${escapeHtml(selectedDoc.path)}" readonly />
+            </div>
+            <div class="field full">
+              <label>Title</label>
+              <input value="${escapeHtml(selectedDoc.label)}" readonly />
+            </div>
+            <div class="field full">
+              <label>Markdown</label>
+              <textarea class="doc-editor" data-doc-editor="content">${escapeHtml(docSourceText)}</textarea>
+            </div>
+          </div>
+          <div class="doc-actions">
+            <button class="inline-button" type="button" data-doc-action="reload">Reload</button>
+            <button class="primary" type="button" data-doc-action="save">Save document</button>
+            <button class="ghost" type="button" data-doc-action="download">Download</button>
+          </div>
         </div>
       </div>
     </section>
@@ -809,6 +870,47 @@ function wireDrawerInputs() {
       if (input.dataset.draftField === "node_type") {
         state.draftNodeType = input.value;
         updatePatchPreview();
+      }
+    });
+  });
+
+  el.drawerBody.querySelectorAll("[data-doc-select]").forEach((button) => {
+    button.addEventListener("click", () => setSelectedDocPath(button.dataset.docSelect));
+  });
+
+  const docEditor = el.drawerBody.querySelector("[data-doc-editor]");
+  if (docEditor) {
+    docEditor.addEventListener("input", () => {
+      state.docDraft = docEditor.value;
+    });
+  }
+
+  el.drawerBody.querySelectorAll("[data-doc-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const action = button.dataset.docAction;
+      if (action === "connect-folder") {
+        await connectDocsFolder();
+      } else if (action === "open-overview") {
+        const path = state.docsManifest?.default_doc || "docs/project-overview.md";
+        setSelectedDocPath(path);
+      } else if (action === "reload") {
+        const path = getSelectedDocPath();
+        state.docDraft = state.docsContentByPath[path] || "";
+        renderDrawer();
+      } else if (action === "save") {
+        await saveActiveDoc();
+      } else if (action === "download") {
+        const path = getSelectedDocPath();
+        const content = state.docDraft ?? "";
+        const blob = new Blob([content], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = path.split("/").pop() || "document.md";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
       }
     });
   });
@@ -1099,12 +1201,149 @@ function formatTaskSummary(task) {
   `;
 }
 
+async function fetchText(url) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to load ${url} (${response.status})`);
+  }
+  return response.text();
+}
+
+function normalizeDocsManifest(raw) {
+  return {
+    default_doc: raw?.default_doc || "docs/project-overview.md",
+    docs: Array.isArray(raw?.docs)
+      ? raw.docs
+          .filter((item) => item && item.path)
+          .map((item) => ({
+            path: item.path,
+            label: item.label || item.path.split("/").pop() || item.path,
+            description: item.description || "",
+          }))
+      : [],
+  };
+}
+
+function getDocEntries() {
+  const docs = state.docsManifest?.docs || [];
+  if (docs.length) return docs;
+  return [
+    { path: "README.md", label: "README", description: "Root project overview" },
+    { path: "docs/project-overview.md", label: "Project Overview", description: "Compass status and next steps" },
+    { path: "docs/hermes-component-api-spec.md", label: "Hermes Component API Spec", description: "API and state spec" },
+  ];
+}
+
+function getSelectedDocPath() {
+  const docs = getDocEntries();
+  return state.selectedDocPath || state.docsManifest?.default_doc || docs[0]?.path || "";
+}
+
+function setSelectedDocPath(path) {
+  state.selectedDocPath = path;
+  state.docDraft = state.docsContentByPath[path] ?? state.docDraft ?? "";
+  state.activeSection = "docs";
+  renderDrawer();
+}
+
+function getDocSourceText(path) {
+  return path === state.selectedDocPath ? state.docDraft : state.docsContentByPath[path] || "";
+}
+
+async function loadDocsManifest(baseUrl, docsManifestUrl) {
+  const resolved = resolveUrl(baseUrl, docsManifestUrl || "docs/index.json");
+  try {
+    return { url: resolved, manifest: normalizeDocsManifest(await fetchJson(resolved)) };
+  } catch {
+    return { url: resolved, manifest: normalizeDocsManifest({}) };
+  }
+}
+
+async function loadDocsContent(baseUrl, docsManifest) {
+  const entries = docsManifest.docs.length ? docsManifest.docs : getDocEntries();
+  const contentByPath = {};
+  for (const entry of entries) {
+    const url = resolveUrl(baseUrl, entry.path);
+    try {
+      contentByPath[entry.path] = await fetchText(url);
+    } catch {
+      contentByPath[entry.path] = `# Missing file\n\nUnable to load ${entry.path}`;
+    }
+  }
+  state.docsContentByPath = contentByPath;
+  if (!state.selectedDocPath) state.selectedDocPath = docsManifest.default_doc || entries[0]?.path || "";
+  if (!state.docDraft) state.docDraft = contentByPath[state.selectedDocPath] || "";
+}
+
+function getActiveDocEntry() {
+  const path = getSelectedDocPath();
+  return getDocEntries().find((doc) => doc.path === path) || { path, label: path, description: "" };
+}
+
+async function connectDocsFolder() {
+  if (!window.showDirectoryPicker) {
+    setSummary("This browser does not support folder write access. Use download fallback or Chrome.", "warn");
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+    state.docsFolderHandle = handle;
+    state.docsFileHandles = {};
+    await indexDocsFolder(handle);
+    setSummary("Docs folder connected. You can now save Markdown directly to disk.", "ok");
+  } catch (error) {
+    if (error?.name !== "AbortError") setSummary(error.message, "error");
+  }
+}
+
+async function indexDocsFolder(dirHandle, basePath = "") {
+  for await (const [name, handle] of dirHandle.entries()) {
+    const relPath = basePath ? `${basePath}/${name}` : name;
+    if (handle.kind === "directory") {
+      await indexDocsFolder(handle, relPath);
+      continue;
+    }
+    if (handle.kind === "file" && name.toLowerCase().endsWith(".md")) {
+      state.docsFileHandles[relPath] = handle;
+      const file = await handle.getFile();
+      state.docsContentByPath[relPath] = await file.text();
+    }
+  }
+}
+
+async function saveActiveDoc() {
+  const path = getSelectedDocPath();
+  if (!path) return;
+  const content = state.docDraft ?? "";
+  const handle = state.docsFileHandles[path];
+  if (handle?.createWritable) {
+    const writable = await handle.createWritable();
+    await writable.write(content);
+    await writable.close();
+    state.docsContentByPath[path] = content;
+    setSummary(`Saved ${path} to disk.`, "ok");
+    return;
+  }
+  const blob = new Blob([content], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = path.split("/").pop() || "document.md";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  state.docsContentByPath[path] = content;
+  setSummary(`Downloaded ${path} because no writable folder is connected.`, "warn");
+}
+
 function openProjectDrawer(projectId) {
   const index = findProjectIndex(projectId);
   if (index < 0) return;
   state.selectedNodeId = projectId;
   state.selectedEdgeId = null;
   state.draftKind = "project";
+  state.activeSection = "identity_and_role";
   state.original = clone(state.server.projects[index]);
   state.draft = clone(state.server.projects[index]);
   state.baseRevision = state.server.state.revision;
@@ -1119,10 +1358,11 @@ function openNewProjectDrawer() {
   state.selectedNodeId = null;
   state.selectedEdgeId = null;
   state.draftKind = "project-new";
+  state.activeSection = "identity_and_role";
   state.draftNodeType = "project";
   state.original = null;
   state.draft = empty.project;
-  state.draft.identity_and_role.operational_status = "idle";
+
   state.draft.roadmap_and_tasks = [];
   state.baseRevision = state.server.state.revision;
   renderDrawer();
@@ -1699,35 +1939,41 @@ async function bootstrap(forceReload = false) {
   state.availableSets = manifest?.sets || [];
   state.selectedSetKey = selectedSet?.key || boot.querySet || rootConfig.default_set || manifest?.default_set || null;
   state.selectedSetLabel = selectedSet?.label || selectedSet?.key || state.selectedSetKey;
-  state.config = config;
-  state.configUrl = configUrl;
+    state.config = config;
+    state.configUrl = configUrl;
 
-  const source = boot.queryState && config.allow_state_query_param !== false ? boot.queryState : config.state_source;
-  state.sourceUrl = source;
-  const sourceUrl = resolveUrl(configUrl, source);
-  const sourceData = await fetchJson(sourceUrl);
-  const normalized = normalizeState(sourceData);
-  state.storageKey = inferStorageKey(config, sourceUrl, normalized.state.ecosystem_id, state.selectedSetKey);
+    const appRootUrl = new URL("/", configUrl).toString();
+    const docsManifestSource = config.docs_manifest || "docs/index.json";
+    const docsBundle = await loadDocsManifest(appRootUrl, docsManifestSource);
+    state.docsManifest = docsBundle.manifest;
+    await loadDocsContent(appRootUrl, state.docsManifest);
 
-  const stored = !forceReload ? loadJsonFromStorage(state.storageKey) : null;
-  if (stored && stored.state && stored.schema_version) {
-    const normalizedStored = normalizeState(stored);
-    const storedErrors = validateState(normalizedStored);
-    if (storedErrors.length) {
+    const source = boot.queryState && config.allow_state_query_param !== false ? boot.queryState : config.state_source;
+    state.sourceUrl = source;
+    const sourceUrl = resolveUrl(appRootUrl, source);
+    const sourceData = await fetchJson(sourceUrl);
+    const normalized = normalizeState(sourceData);
+    state.storageKey = inferStorageKey(config, sourceUrl, normalized.state.ecosystem_id, state.selectedSetKey);
+
+    const stored = !forceReload ? loadJsonFromStorage(state.storageKey) : null;
+    if (stored && stored.state && stored.schema_version) {
+      const normalizedStored = normalizeState(stored);
+      const storedErrors = validateState(normalizedStored);
+      if (storedErrors.length) {
+        state.server = normalized;
+        saveJsonToStorage(state.storageKey, state.server);
+      } else {
+        state.server = normalizedStored;
+      }
+    } else {
       state.server = normalized;
       saveJsonToStorage(state.storageKey, state.server);
-    } else {
-      state.server = normalizedStored;
     }
-  } else {
-    state.server = normalized;
-    saveJsonToStorage(state.storageKey, state.server);
-  }
 
-  if (!forceReload && state.server.state.revision < normalized.state.revision) {
-    state.server = normalized;
-    saveJsonToStorage(state.storageKey, state.server);
-  }
+    if (!forceReload && state.server.state.revision < normalized.state.revision) {
+      state.server = normalized;
+      saveJsonToStorage(state.storageKey, state.server);
+    }
 
   if (!state.draft) {
     state.baseRevision = state.server.state.revision;
