@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07111f" />
+    <title>Plan Graph</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="appShell" class="app-shell">
+      <header class="topbar">
+        <div class="topbar__left">
+          <div class="eyebrow">Plan Graph</div>
+          <h1 id="appTitle">Ecosystem Interactive Control & Living Architecture Hub</h1>
+          <p id="appSubtitle">Schema-driven D3 canvas and multi-section project drawer.</p>
+        </div>
+        <div class="topbar__center" id="healthCluster"></div>
+        <div class="topbar__right">
+          <div class="set-switcher">
+            <label for="setSelect">Set</label>
+            <select id="setSelect" aria-label="Project set"></select>
+          </div>
+          <button id="refreshButton" class="ghost">Reload</button>
+          <button id="addProjectButton" class="primary">Add Project/Agent</button>
+        </div>
+      </header>
+
+      <section class="meta-strip">
+        <div class="meta-strip__stats">
+          <div class="stat"><span class="stat__label">Revision</span><strong id="revisionStat">—</strong></div>
+          <div class="stat"><span class="stat__label">Health</span><strong id="healthStat">—</strong></div>
+          <div class="stat"><span class="stat__label">Alerts</span><strong id="alertsStat">—</strong></div>
+          <div class="stat"><span class="stat__label">Blocked</span><strong id="blockedStat">—</strong></div>
+        </div>
+        <div class="meta-strip__tasks" id="metaTaskBar"></div>
+      </section>
+
+      <main class="workspace">
+        <section class="graph-grid">
+          <section class="graph-panel graph-panel--compass">
+            <div class="graph-panel__header">
+              <div>
+                <div class="panel-kicker">D3 Canvas</div>
+                <h2>Compass Overview</h2>
+              </div>
+              <div class="panel-hint">A quick spatial overview of the ecosystem.</div>
+            </div>
+            <div id="compassViewport" class="graph-viewport">
+              <svg id="compassSvg" aria-label="Compass overview"></svg>
+              <div id="compassTooltip" class="tooltip" hidden></div>
+            </div>
+          </section>
+
+          <section class="graph-panel graph-panel--network">
+            <div class="graph-panel__header">
+              <div>
+                <div class="panel-kicker">D3 Canvas</div>
+                <h2>Subproject Network</h2>
+              </div>
+              <div class="panel-hint">Drag nodes, hover edges, click to inspect.</div>
+            </div>
+            <div id="graphViewport" class="graph-viewport">
+              <svg id="graphSvg" aria-label="Ecosystem graph"></svg>
+              <div id="tooltip" class="tooltip" hidden></div>
+            </div>
+          </section>
+        </section>
+      </main>
+
+      <aside id="drawer" class="drawer open drawer--persistent" aria-hidden="false">
+        <div class="drawer__shell">
+          <div class="drawer__head">
+            <div>
+              <div id="drawerMode" class="drawer__mode">Project</div>
+              <h2 id="drawerTitle">Select a project</h2>
+              <div class="drawer__meta"><span id="drawerRevision">—</span> · <span id="drawerBaseRevision">—</span></div>
+            </div>
+            <button id="closeDrawerButton" class="ghost">Hide</button>
+          </div>
+
+          <div class="drawer__tabs" id="drawerTabs">
+            <button class="tab active" data-section="identity_and_role">Identity</button>
+            <button class="tab" data-section="interfaces_and_flows">Flows</button>
+            <button class="tab" data-section="scheduler">Scheduler</button>
+            <button class="tab" data-section="roadmap_and_tasks">Tasks</button>
+            <button class="tab" data-section="export_and_commit">Export</button>
+          </div>
+
+          <div id="drawerBody" class="drawer__body"></div>
+
+          <div class="drawer__footer">
+            <div class="drawer__status">
+              <div id="validationSummary" class="summary"></div>
+              <pre id="patchPreview" class="patch-preview"></pre>
+            </div>
+            <div class="drawer__actions">
+              <button id="saveButton" class="primary">Save &amp; Export</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <script src="vendor/d3.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

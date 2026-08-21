@@ -1,0 +1,10 @@
+{
+  "name": "plan-graph",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "python scripts/build.py",
+    "dev": "python -m http.server 8000",
+    "serve": "python -m http.server 8080 -d dist"
+  }
+}

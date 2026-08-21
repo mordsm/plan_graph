@@ -1,0 +1,8 @@
+{
+  "app_title": "Plan Graph — COMPAS Finance",
+  "state_source": "../../examples/compas-ecosystem.sample.json",
+  "storage_prefix": "plan-graph-compas-finance",
+  "default_view": "meta-window",
+  "allow_state_query_param": true,
+  "default_set": "compas-finance"
+}

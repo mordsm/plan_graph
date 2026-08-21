@@ -1,0 +1,17 @@
+{
+  "default_set": "compas-finance",
+  "sets": [
+    {
+      "key": "compas-finance",
+      "label": "COMPAS Finance",
+      "config_url": "compas-finance.config.json",
+      "description": "Default finance + statements ecosystem set."
+    },
+    {
+      "key": "compas-finance-preview",
+      "label": "COMPAS Finance Preview",
+      "config_url": "compas-finance-preview.config.json",
+      "description": "Alternate setwork with isolated local storage for preview/testing."
+    }
+  ]
+}

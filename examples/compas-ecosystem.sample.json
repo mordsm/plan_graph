@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "state": {
+    "ecosystem_id": "compas_finance_ecosystem",
+    "revision": 7,
+    "updated_at_utc": "2026-08-21T08:30:00Z",
+    "updated_by": "codex",
+    "lock": {
+      "mode": "optimistic",
+      "owner": null,
+      "expires_at_utc": null
+    }
+  },
+  "meta_window": {
+    "graph": {
+      "nodes": [
+        { "node_id": "isracard_mail", "node_type": "external_system", "label": "Isracard Mail", "project_ref": "isracard_mail", "status": "active", "position": { "x": 80, "y": 180, "pinned": true }, "tags": ["mail", "source"] },
+        { "node_id": "mail_manager", "node_type": "agent", "label": "Mail Manager", "project_ref": "mail_manager", "status": "active", "position": { "x": 320, "y": 180, "pinned": true }, "tags": ["parser", "worker"] },
+        { "node_id": "economic_manager", "node_type": "project", "label": "Economic Manager", "project_ref": "economic_manager", "status": "active", "position": { "x": 580, "y": 180, "pinned": true }, "tags": ["finance", "normalizer"] },
+        { "node_id": "compas", "node_type": "project", "label": "COMPAS", "project_ref": "compas", "status": "idle", "position": { "x": 840, "y": 180, "pinned": true }, "tags": ["dashboard", "decisioning"] }
+      ],
+      "edges": [
+        { "edge_id": "edge_isracard_to_mail_manager", "label": "Statement.Email", "source_node": "isracard_mail", "target_node": "mail_manager", "channel_type": "scheduled_pull", "payload_format": "EMAIL", "protocol": "imap", "status": "healthy", "last_success_at_utc": "2026-08-21T06:00:00Z" },
+        { "edge_id": "edge_mail_manager_to_economic_manager", "label": "Statement.CSV", "source_node": "mail_manager", "target_node": "economic_manager", "channel_type": "direct_push", "payload_format": "CSV", "protocol": "filesystem", "status": "healthy", "last_success_at_utc": "2026-08-21T06:02:00Z" },
+        { "edge_id": "edge_economic_manager_to_compas", "label": "REST JSON", "source_node": "economic_manager", "target_node": "compas", "channel_type": "webhook", "payload_format": "REST_JSON", "protocol": "rest", "status": "degraded", "last_success_at_utc": "2026-08-20T18:45:00Z" }
+      ],
+      "layout": { "engine": "d3-force", "version": "1", "viewport": { "x": 0, "y": 0, "zoom": 1 } }
+    },
+    "health": {
+      "status": "degraded",
+      "checked_at_utc": "2026-08-21T08:30:00Z",
+      "active_projects": 3,
+      "blocked_tasks": 1,
+      "open_alerts": 1
+    },
+    "alerts": [
+      {
+        "alert_id": "alert_compas_webhook_delay",
+        "severity": "warning",
+        "source_node": "compas",
+        "message": "COMPAS import webhook has not acknowledged the latest Economic Manager payload.",
+        "created_at_utc": "2026-08-21T08:15:00Z",
+        "status": "open"
+      }
+    ],
+    "meta_tasks": [
+      { "project_id": "economic_manager", "task_id": "task_reconcile_csv_schema", "title": "Reconcile Isracard CSV columns before COMPAS sync", "priority": "urgent", "status": "blocked" },
+      { "project_id": "compas", "task_id": "task_show_last_import_health", "title": "Expose last import health badge in COMPAS", "priority": "high", "status": "planned" }
+    ]
+  },
+  "projects": [
+    {
+      "identity_and_role": { "project_id": "isracard_mail", "name": "Isracard Mail", "description": "External mailbox containing card statements and transaction notifications.", "role": "Source system for card statement ingestion.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [],
+        "outputs": [{ "target_node": "mail_manager", "payload_format": "EMAIL", "protocol": "imap", "channel": "inbox:isracard", "required": true }],
+        "external_apis": [{ "endpoint_name": "Gmail IMAP", "base_url": null, "trigger_mode": "scheduled", "auth_requirements": "OAuth token; may require 2FA prompt during reauthorization.", "rate_limit": null }]
+      },
+      "scheduler": { "cron_expression": "0 */6 * * *", "next_run_utc": "2026-08-21T12:00:00Z", "execution_type": "automated_api", "requires_manual_login": true, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_refresh_mail_token", "title": "Verify long-lived mailbox OAuth refresh", "type": "api_job", "status": "planned", "priority": "medium", "show_in_meta": false, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update isracard_mail: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "mail_manager", "name": "Mail Manager", "description": "Agent that fetches relevant messages, extracts attachments, and normalizes statement artifacts.", "role": "Transforms mailbox events into structured statement files.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "isracard_mail", "payload_format": "EMAIL", "protocol": "imap", "channel": "inbox:isracard", "required": true }],
+        "outputs": [{ "target_node": "economic_manager", "payload_format": "CSV", "protocol": "filesystem", "channel": "data/isracard/statements", "required": true }],
+        "external_apis": []
+      },
+      "scheduler": { "cron_expression": "5 */6 * * *", "next_run_utc": "2026-08-21T12:05:00Z", "execution_type": "local_worker", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_attachment_fingerprint", "title": "Add duplicate attachment fingerprinting", "type": "roadmap_task", "status": "in_progress", "priority": "medium", "show_in_meta": false, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update mail_manager: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "economic_manager", "name": "Economic Manager", "description": "Finance normalization service that reconciles statements, categories, and account-level views.", "role": "Converts raw statement exports into canonical financial JSON for downstream systems.", "operational_status": "active" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "mail_manager", "payload_format": "CSV", "protocol": "filesystem", "channel": "data/isracard/statements", "required": true }],
+        "outputs": [{ "target_node": "compas", "payload_format": "REST_JSON", "protocol": "rest", "channel": "/api/imports/economic-manager", "required": true }],
+        "external_apis": [{ "endpoint_name": "COMPAS Import API", "base_url": "https://compas.local/api/imports/economic-manager", "trigger_mode": "event", "auth_requirements": "Service token stored outside schema; no manual login.", "rate_limit": "60 requests/minute" }]
+      },
+      "scheduler": { "cron_expression": "10 */6 * * *", "next_run_utc": "2026-08-21T12:10:00Z", "execution_type": "automated_api", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_reconcile_csv_schema", "title": "Reconcile Isracard CSV columns before COMPAS sync", "type": "api_job", "status": "blocked", "priority": "urgent", "show_in_meta": true, "blocked_reason": "Latest CSV export contains a new merchant_reference column not yet mapped.", "due_at_utc": "2026-08-22T12:00:00Z" }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": [{ "op": "replace", "path": "/projects/2/roadmap_and_tasks/0/status", "value": "blocked" }], "commit_message_template": "Update economic_manager: {summary}" }
+    },
+    {
+      "identity_and_role": { "project_id": "compas", "name": "COMPAS", "description": "Decisioning and visibility layer for personal operations, finance signals, and cross-project state.", "role": "Consumes normalized economic data and exposes actionable ecosystem intelligence.", "operational_status": "idle" },
+      "interfaces_and_flows": {
+        "inputs": [{ "source_node": "economic_manager", "payload_format": "REST_JSON", "protocol": "rest", "channel": "/api/imports/economic-manager", "required": true }],
+        "outputs": [],
+        "external_apis": []
+      },
+      "scheduler": { "cron_expression": null, "next_run_utc": null, "execution_type": "not_scheduled", "requires_manual_login": false, "timezone": "UTC" },
+      "roadmap_and_tasks": [{ "task_id": "task_show_last_import_health", "title": "Expose last import health badge in COMPAS", "type": "roadmap_task", "status": "planned", "priority": "high", "show_in_meta": true, "blocked_reason": null, "due_at_utc": null }],
+      "export_and_commit": { "patch_protocol": "json_patch_rfc6902", "last_patch": null, "commit_message_template": "Update compas: {summary}" }
+    }
+  ]
+}

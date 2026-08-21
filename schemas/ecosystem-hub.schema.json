@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.local/ecosystem-hub.schema.json",
+  "title": "Ecosystem Interactive Control & Living Architecture Hub",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "state", "meta_window", "projects"],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "state": { "$ref": "#/definitions/stateEnvelope" },
+    "meta_window": { "$ref": "#/definitions/metaWindow" },
+    "projects": { "type": "array", "items": { "$ref": "#/definitions/projectWindow" } }
+  },
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_:-]{1,80}$" },
+    "isoDateTime": { "type": "string", "format": "date-time" },
+    "operationalStatus": { "type": "string", "enum": ["active", "idle", "error"] },
+    "payloadFormat": { "type": "string", "enum": ["CSV", "JSON", "HTML", "PDF", "TXT", "REST_JSON", "EMAIL", "MIXED"] },
+    "protocol": { "type": "string", "enum": ["imap", "smtp", "rest", "filesystem", "database", "queue", "webhook", "manual", "internal"] },
+    "stateEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecosystem_id", "revision", "updated_at_utc", "updated_by", "lock"],
+      "properties": {
+        "ecosystem_id": { "$ref": "#/definitions/id" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "updated_at_utc": { "$ref": "#/definitions/isoDateTime" },
+        "updated_by": { "type": "string", "minLength": 1 },
+        "lock": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["unlocked", "optimistic", "locked"] },
+            "owner": { "type": ["string", "null"] },
+            "expires_at_utc": { "type": ["string", "null"], "format": "date-time" }
+          }
+        }
+      }
+    },
+    "metaWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["graph", "health", "alerts", "meta_tasks"],
+      "properties": {
+        "graph": { "$ref": "#/definitions/graph" },
+        "health": { "$ref": "#/definitions/globalHealth" },
+        "alerts": { "type": "array", "items": { "$ref": "#/definitions/alert" } },
+        "meta_tasks": { "type": "array", "items": { "$ref": "#/definitions/metaTask" } }
+      }
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodes", "edges", "layout"],
+      "properties": {
+        "nodes": { "type": "array", "items": { "$ref": "#/definitions/graphNode" } },
+        "edges": { "type": "array", "items": { "$ref": "#/definitions/graphEdge" } },
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["engine", "version"],
+          "properties": {
+            "engine": { "type": "string", "enum": ["d3-force", "dagre", "manual"] },
+            "version": { "type": "string" },
+            "viewport": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "x": { "type": "number" },
+                "y": { "type": "number" },
+                "zoom": { "type": "number", "exclusiveMinimum": 0 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "graphNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "node_type", "label", "project_ref", "status"],
+      "properties": {
+        "node_id": { "$ref": "#/definitions/id" },
+        "node_type": { "type": "string", "enum": ["project", "agent", "external_system"] },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "project_ref": { "type": ["string", "null"] },
+        "status": { "$ref": "#/definitions/operationalStatus" },
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "pinned": { "type": "boolean" }
+          }
+        },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "graphEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edge_id", "label", "source_node", "target_node", "channel_type", "payload_format", "status"],
+      "properties": {
+        "edge_id": { "$ref": "#/definitions/id" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "source_node": { "$ref": "#/definitions/id" },
+        "target_node": { "$ref": "#/definitions/id" },
+        "channel_type": { "type": "string", "enum": ["direct_push", "queue", "webhook", "polling", "manual_upload", "scheduled_pull"] },
+        "payload_format": { "$ref": "#/definitions/payloadFormat" },
+        "protocol": { "$ref": "#/definitions/protocol" },
+        "status": { "type": "string", "enum": ["healthy", "degraded", "blocked", "unknown"] },
+        "last_success_at_utc": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "projectWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity_and_role", "interfaces_and_flows", "scheduler", "roadmap_and_tasks", "export_and_commit"],
+      "properties": {
+        "identity_and_role": { "$ref": "#/definitions/identityAndRole" },
+        "interfaces_and_flows": { "$ref": "#/definitions/interfacesAndFlows" },
+        "scheduler": { "$ref": "#/definitions/scheduler" },
+        "roadmap_and_tasks": { "type": "array", "items": { "$ref": "#/definitions/task" } },
+        "export_and_commit": { "$ref": "#/definitions/exportAndCommit" }
+      }
+    },
+    "identityAndRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "name", "description", "role", "operational_status"],
+      "properties": {
+        "project_id": { "$ref": "#/definitions/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "role": { "type": "string" },
+        "operational_status": { "$ref": "#/definitions/operationalStatus" }
+      }
+    },
+    "interfacesAndFlows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "outputs", "external_apis"],
+      "properties": {
+        "inputs": { "type": "array", "items": { "$ref": "#/definitions/flowInput" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/definitions/flowOutput" } },
+        "external_apis": { "type": "array", "items": { "$ref": "#/definitions/externalApi" } }
+      }
+    },
+    "flowInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_node", "payload_format", "protocol"],
+      "properties": {
+        "source_node": { "$ref": "#/definitions/id" },
+        "payload_format": { "$ref": "#/definitions/payloadFormat" },
+        "protocol": { "$ref": "#/definitions/protocol" },
+        "channel": { "type": "string" },
+        "required": { "type": "boolean", "default": true }
+      }
+    },
+    "flowOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_node", "payload_format", "protocol"],
+      "properties": {
+        "target_node": { "$ref": "#/definitions/id" },
+        "payload_format": { "$ref": "#/definitions/payloadFormat" },
+        "protocol": { "$ref": "#/definitions/protocol" },
+        "channel": { "type": "string" },
+        "required": { "type": "boolean", "default": true }
+      }
+    },
+    "externalApi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint_name", "trigger_mode", "auth_requirements"],
+      "properties": {
+        "endpoint_name": { "type": "string", "minLength": 1 },
+        "base_url": { "type": ["string", "null"] },
+        "trigger_mode": { "type": "string", "enum": ["scheduled", "event", "manual"] },
+        "auth_requirements": { "type": "string" },
+        "rate_limit": { "type": ["string", "null"] }
+      }
+    },
+    "scheduler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cron_expression", "next_run_utc", "execution_type", "requires_manual_login"],
+      "properties": {
+        "cron_expression": { "type": ["string", "null"] },
+        "next_run_utc": { "type": ["string", "null"], "format": "date-time" },
+        "execution_type": { "type": "string", "enum": ["automated_api", "local_worker", "manual_run", "not_scheduled"] },
+        "requires_manual_login": { "type": "boolean" },
+        "timezone": { "type": "string", "default": "UTC" }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "title", "type", "status", "priority", "show_in_meta"],
+      "properties": {
+        "task_id": { "$ref": "#/definitions/id" },
+        "title": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["api_job", "roadmap_task"] },
+        "status": { "type": "string", "enum": ["planned", "in_progress", "done", "blocked"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "show_in_meta": { "type": "boolean" },
+        "blocked_reason": { "type": ["string", "null"] },
+        "due_at_utc": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "exportAndCommit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["patch_protocol", "last_patch"],
+      "properties": {
+        "patch_protocol": { "type": "string", "enum": ["json_patch_rfc6902"] },
+        "last_patch": { "type": ["array", "null"], "items": { "$ref": "#/definitions/jsonPatchOperation" } },
+        "commit_message_template": { "type": "string" }
+      }
+    },
+    "jsonPatchOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "path"],
+      "properties": {
+        "op": { "type": "string", "enum": ["add", "remove", "replace", "move", "copy", "test"] },
+        "path": { "type": "string", "pattern": "^/" },
+        "from": { "type": "string", "pattern": "^/" },
+        "value": {}
+      }
+    },
+    "alert": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alert_id", "severity", "source_node", "message", "created_at_utc", "status"],
+      "properties": {
+        "alert_id": { "$ref": "#/definitions/id" },
+        "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+        "source_node": { "$ref": "#/definitions/id" },
+        "message": { "type": "string" },
+        "created_at_utc": { "$ref": "#/definitions/isoDateTime" },
+        "status": { "type": "string", "enum": ["open", "acknowledged", "resolved"] }
+      }
+    },
+    "metaTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "task_id", "title", "priority", "status"],
+      "properties": {
+        "project_id": { "$ref": "#/definitions/id" },
+        "task_id": { "$ref": "#/definitions/id" },
+        "title": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "status": { "type": "string", "enum": ["planned", "in_progress", "done", "blocked"] }
+      }
+    },
+    "globalHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at_utc", "active_projects", "blocked_tasks", "open_alerts"],
+      "properties": {
+        "status": { "type": "string", "enum": ["healthy", "degraded", "critical", "unknown"] },
+        "checked_at_utc": { "$ref": "#/definitions/isoDateTime" },
+        "active_projects": { "type": "integer", "minimum": 0 },
+        "blocked_tasks": { "type": "integer", "minimum": 0 },
+        "open_alerts": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
