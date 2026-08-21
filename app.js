@@ -26,6 +26,7 @@ const el = {
   graphSvg: document.getElementById("graphSvg"),
   graphViewport: document.getElementById("graphViewport"),
   tooltip: document.getElementById("tooltip"),
+  splitter: document.getElementById("splitter"),
   drawer: document.getElementById("drawer"),
   drawerMode: document.getElementById("drawerMode"),
   drawerTitle: document.getElementById("drawerTitle"),
@@ -61,12 +62,14 @@ const state = {
   graphReady: false,
   sourceUrl: null,
   storageKey: null,
+  drawerWidth: 520,
   docsManifest: null,
   docsContentByPath: {},
   selectedDocPath: null,
   docDraft: "",
   docsFolderHandle: null,
   docsFileHandles: {},
+  renderFrame: null,
 };
 
 const PROJECT_SECTIONS = [
@@ -133,6 +136,40 @@ function loadJsonFromStorage(key) {
 
 function saveJsonToStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+const UI_PREFS_STORAGE_KEY = "plan-graph::ui-prefs";
+
+function loadUiPrefs() {
+  return loadJsonFromStorage(UI_PREFS_STORAGE_KEY) || {};
+}
+
+function saveUiPrefs(prefs) {
+  saveJsonToStorage(UI_PREFS_STORAGE_KEY, prefs);
+}
+
+function clampDrawerWidth(width) {
+  const minWidth = 420;
+  const maxWidth = Math.max(minWidth, Math.floor(window.innerWidth * 0.72));
+  return Math.max(minWidth, Math.min(maxWidth, Math.round(width)));
+}
+
+function applyDrawerWidth(width, persist = false) {
+  const next = clampDrawerWidth(width);
+  state.drawerWidth = next;
+  document.documentElement.style.setProperty("--drawer-width", `${next}px`);
+  if (persist) {
+    saveUiPrefs({ ...(loadUiPrefs() || {}), drawerWidth: next });
+  }
+  return next;
+}
+
+function scheduleRender() {
+  if (state.renderFrame) return;
+  state.renderFrame = requestAnimationFrame(() => {
+    state.renderFrame = null;
+    if (state.server) render();
+  });
 }
 
 async function fetchJson(url) {
@@ -272,6 +309,13 @@ function normalizeEdge(edge) {
     status: edge.status || "unknown",
     last_success_at_utc: edge.last_success_at_utc ?? null,
   };
+}
+
+function formatEdgeBadge(edge) {
+  const title = edge.label || `${edge.source_node} → ${edge.target_node}`;
+  const parts = [edge.payload_format, edge.channel_type, edge.protocol].filter(Boolean);
+  const meta = [...new Set(parts)].join(" • ");
+  return { title, meta: meta || edge.status || "flow" };
 }
 
 function getProjectNodeRef(project) {
@@ -1461,10 +1505,19 @@ function renderNetworkGraph() {
     .on("mousemove", (event, d) => showEdgeTooltip(event, d, el.graphViewport, el.tooltip))
     .on("mouseleave", () => hideTooltip(el.tooltip));
 
-  linkGroup
-    .append("text")
-    .attr("class", "edge-badge")
-    .text((d) => d.label);
+  const edgeBadge = linkGroup.append("text").attr("class", "edge-badge");
+  edgeBadge
+    .append("tspan")
+    .attr("class", "edge-badge__title")
+    .attr("x", 0)
+    .attr("dy", 0)
+    .text((d) => formatEdgeBadge(d).title);
+  edgeBadge
+    .append("tspan")
+    .attr("class", "edge-badge__meta")
+    .attr("x", 0)
+    .attr("dy", "1.15em")
+    .text((d) => formatEdgeBadge(d).meta);
 
   const nodeGroup = zoomLayer.append("g").attr("class", "nodes").selectAll("g").data(nodes, (d) => d.node_id).join("g").attr("class", (d) => `node${state.selectedNodeId === d.node_id ? " selected" : ""}`);
 
@@ -1529,8 +1582,7 @@ function renderNetworkGraph() {
 
     linkGroup
       .select("text.edge-badge")
-      .attr("x", (d) => (d.source.x + d.target.x) / 2)
-      .attr("y", (d) => (d.source.y + d.target.y) / 2 - 6)
+      .attr("transform", (d) => `translate(${(d.source.x + d.target.x) / 2}, ${(d.source.y + d.target.y) / 2 - 6})`)
       .attr("text-anchor", "middle");
 
     nodeGroup.attr("transform", (d) => `translate(${d.x},${d.y})`);
@@ -1698,10 +1750,23 @@ function renderCompassGraph() {
     .on("mouseenter", (event, d) => showEdgeTooltip(event, d, el.compassViewport, el.compassTooltip))
     .on("mousemove", (event, d) => showEdgeTooltip(event, d, el.compassViewport, el.compassTooltip))
     .on("mouseleave", () => hideTooltip(el.compassTooltip));
-  edgeGroup
+  const edgeBadge = edgeGroup
     .append("text")
     .attr("class", "edge-badge")
-    .text((d) => d.label);
+    .attr("text-anchor", "middle")
+    .attr("transform", (d) => `translate(${(d.source.x + d.target.x) / 2}, ${(d.source.y + d.target.y) / 2 - 6})`);
+  edgeBadge
+    .append("tspan")
+    .attr("class", "edge-badge__title")
+    .attr("x", 0)
+    .attr("dy", 0)
+    .text((d) => formatEdgeBadge(d).title);
+  edgeBadge
+    .append("tspan")
+    .attr("class", "edge-badge__meta")
+    .attr("x", 0)
+    .attr("dy", "1.15em")
+    .text((d) => formatEdgeBadge(d).meta);
 
   const nodeGroup = layer.append("g").attr("class", "compass-nodes").selectAll("g").data(layoutNodes, (d) => d.node_id).join("g").attr("class", (d) => `node node--compass${state.selectedNodeId === d.node_id ? " selected" : ""}`);
   nodeGroup
@@ -1869,6 +1934,13 @@ function saveCurrent() {
 }
 
 function wireGlobalActions() {
+  const initialUiPrefs = loadUiPrefs();
+  if (initialUiPrefs.drawerWidth) {
+    applyDrawerWidth(initialUiPrefs.drawerWidth, false);
+  } else {
+    document.documentElement.style.setProperty("--drawer-width", `${state.drawerWidth}px`);
+  }
+  wireSplitLayoutActions();
   el.refreshButton.addEventListener("click", async () => {
     await bootstrap(true);
   });
@@ -1884,6 +1956,7 @@ function wireGlobalActions() {
     if (event.key === "Escape") closeDrawer();
   });
   window.addEventListener("resize", () => {
+    applyDrawerWidth(state.drawerWidth, false);
     if (state.server) render();
   });
   el.graphViewport.addEventListener("click", (event) => {
@@ -1892,6 +1965,73 @@ function wireGlobalActions() {
       state.selectedEdgeId = null;
       hideTooltip();
       render();
+    }
+  });
+}
+
+function wireSplitLayoutActions() {
+  if (!el.splitter || el.splitter.dataset.bound === "true") return;
+  el.splitter.dataset.bound = "true";
+  el.splitter.setAttribute("aria-valuemin", "420");
+  el.splitter.setAttribute("aria-valuemax", String(Math.max(420, Math.floor(window.innerWidth * 0.72))));
+  el.splitter.setAttribute("aria-valuenow", String(state.drawerWidth));
+
+  let dragging = false;
+  let lastWidth = state.drawerWidth;
+
+  const finishDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove("splitter-dragging");
+    applyDrawerWidth(lastWidth, true);
+    scheduleRender();
+    window.removeEventListener("pointermove", handleMove);
+    window.removeEventListener("pointerup", finishDrag);
+    window.removeEventListener("pointercancel", finishDrag);
+  };
+
+  const handleMove = (event) => {
+    if (!dragging) return;
+    lastWidth = applyDrawerWidth(window.innerWidth - event.clientX, false);
+    el.splitter.setAttribute("aria-valuenow", String(lastWidth));
+    scheduleRender();
+  };
+
+  el.splitter.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    dragging = true;
+    document.body.classList.add("splitter-dragging");
+    lastWidth = applyDrawerWidth(window.innerWidth - event.clientX, false);
+    el.splitter.setAttribute("aria-valuenow", String(lastWidth));
+    scheduleRender();
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", finishDrag, { once: true });
+    window.addEventListener("pointercancel", finishDrag, { once: true });
+    event.preventDefault();
+  });
+
+  el.splitter.addEventListener("dblclick", () => {
+    lastWidth = applyDrawerWidth(520, true);
+    el.splitter.setAttribute("aria-valuenow", String(lastWidth));
+    scheduleRender();
+  });
+
+  el.splitter.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") {
+      lastWidth = applyDrawerWidth(state.drawerWidth + 36, true);
+      el.splitter.setAttribute("aria-valuenow", String(lastWidth));
+      scheduleRender();
+      event.preventDefault();
+    } else if (event.key === "ArrowRight") {
+      lastWidth = applyDrawerWidth(state.drawerWidth - 36, true);
+      el.splitter.setAttribute("aria-valuenow", String(lastWidth));
+      scheduleRender();
+      event.preventDefault();
+    } else if (event.key === "Home") {
+      lastWidth = applyDrawerWidth(520, true);
+      el.splitter.setAttribute("aria-valuenow", String(lastWidth));
+      scheduleRender();
+      event.preventDefault();
     }
   });
 }
