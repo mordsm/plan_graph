@@ -265,7 +265,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 }
 .tree-link.is-selected {
   stroke: rgba(59, 130, 246, 0.95);
-  stroke-width: 2.2px;
+  stroke-width: 1.4px;
 }
 .flow-link {
   fill: none;
@@ -569,7 +569,7 @@ body.splitter-dragging .splitter {
   text-anchor: middle;
   paint-order: stroke;
   stroke: rgba(255,255,255,0.95);
-  stroke-width: 4px;
+  stroke-width: 3px;
   stroke-linejoin: round;
 }
 .link-line {

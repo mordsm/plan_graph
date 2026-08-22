@@ -624,12 +624,12 @@ function renderTopbar() {
   el.appTitle.textContent = state.config.app_title || APP_DEFAULTS.app_title;
   el.appSubtitle.textContent = `${state.server.schema_version} • ${state.server.state.ecosystem_id}${state.selectedSetLabel ? ` • ${state.selectedSetLabel}` : ""}`;
   el.revisionStat.textContent = String(state.server.state.revision);
-  el.healthStat.textContent = health.status;
+  el.healthStat.textContent = getHealthDisplayLabel(health.status);
   el.alertsStat.textContent = String(health.open_alerts ?? alerts.filter((a) => a.status === "open").length);
   el.blockedStat.textContent = String(health.blocked_tasks ?? tasks.filter((t) => t.status === "blocked").length);
 
   el.healthCluster.innerHTML = `
-    <span class="health-pill" data-health="${escapeHtml(health.status)}">Health: ${escapeHtml(health.status)}</span>
+    <span class="health-pill" data-health="${escapeHtml(health.status)}">Health: ${escapeHtml(getHealthDisplayLabel(health.status))}</span>
     <span class="health-pill" data-health="unknown">Open alerts: ${escapeHtml(health.open_alerts ?? alerts.length)}</span>
   `;
 
@@ -750,7 +750,7 @@ function renderDrawerProject(project, mode = "edit") {
           <div class="panel-kicker">Project Overview</div>
           <h3>Whole-project status</h3>
         </div>
-        <div class="overview-status" data-health="${escapeHtml(overview.status)}">${escapeHtml(overview.status)}</div>
+        <div class="overview-status" data-health="${escapeHtml(overview.status)}">${escapeHtml(getHealthDisplayLabel(overview.status))}</div>
       </div>
       <p class="overview-summary">${escapeHtml(overview.summary)}</p>
       <div class="overview-grid">
@@ -764,6 +764,10 @@ function renderDrawerProject(project, mode = "edit") {
         <div>
           <div class="overview-label">Next steps</div>
           <ul class="overview-steps">${overviewSteps}</ul>
+          <div class="overview-add-step">
+            <input class="overview-step-input" data-overview-step-input value="${escapeHtml(state.overviewStepDraft || "")}" placeholder="Add a next step..." />
+            <button class="inline-button" type="button" data-overview-action="add-step">Add</button>
+          </div>
         </div>
       </div>
     </section>
@@ -1053,6 +1057,34 @@ function wireDrawerInputs() {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
+      }
+    });
+  });
+
+  const overviewStepInput = el.drawerBody.querySelector("[data-overview-step-input]");
+  if (overviewStepInput) {
+    overviewStepInput.addEventListener("input", () => {
+      state.overviewStepDraft = overviewStepInput.value;
+    });
+  }
+
+  el.drawerBody.querySelectorAll("[data-overview-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.overviewAction;
+      if (action === "add-step") {
+        const nextStep = String(state.overviewStepDraft || "").trim();
+        if (!nextStep) return;
+        state.server.meta_window.overview ??= {};
+        state.server.meta_window.overview.next_steps = Array.isArray(state.server.meta_window.overview.next_steps)
+          ? state.server.meta_window.overview.next_steps
+          : [];
+        state.server.meta_window.overview.next_steps.push(nextStep);
+        state.server.state.revision = (state.server.state.revision || 0) + 1;
+        state.server.state.updated_at_utc = nowUtc();
+        state.overviewStepDraft = "";
+        persistServerState(state.server);
+        saveJsonToStorage(state.storageKey, state.server);
+        updatePatchPreview();
       }
     });
   });
@@ -1547,6 +1579,13 @@ function getEdgeColor(edge) {
   return getComputedStyle(document.documentElement).getPropertyValue("--line-strong").trim();
 }
 
+function getHealthDisplayLabel(status) {
+  if (status === "degraded") return "needs attention";
+  if (status === "critical") return "critical";
+  if (status === "healthy") return "healthy";
+  return status || "unknown";
+}
+
 function getEdgeDash(edge) {
   if (edge.status === "derived") return "7 6";
   if (edge.channel_type === "scheduled_pull") return "4 5";
@@ -1582,6 +1621,7 @@ const HIERARCHY_BRANCH_DIRECTIONS = {
   mail_manager: { vx: 0.1, vy: -1 },
   economic_manager: { vx: 1, vy: 0.05 },
   assessment: { vx: -1, vy: 0.05 },
+  rules_engine: { vx: 0.55, vy: 0.85 },
   self_manager: { vx: 0.15, vy: 1 },
   administrative: { vx: -0.72, vy: 0.72 },
 };
@@ -1658,7 +1698,7 @@ function buildHierarchyTree(projects = []) {
     children: [],
   };
 
-  const orderedIds = ["isracard_mail", "mail_manager", "economic_manager", "assessment", "self_manager", "administrative"];
+  const orderedIds = ["isracard_mail", "mail_manager", "economic_manager", "assessment", "rules_engine", "self_manager", "administrative"];
   const rest = (projects || [])
     .filter((project) => project?.identity_and_role?.project_id && project.identity_and_role.project_id !== "compass")
     .sort((a, b) => {
@@ -1894,10 +1934,10 @@ function renderNetworkGraph() {
     .append("marker")
     .attr("id", "tree-arrowhead")
     .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 16)
+    .attr("refX", 8)
     .attr("refY", 0)
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
+    .attr("markerWidth", 3)
+    .attr("markerHeight", 3)
     .attr("orient", "auto")
     .append("path")
     .attr("d", "M0,-5L10,0L0,5")
