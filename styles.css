@@ -260,17 +260,17 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
 .tree-link {
   fill: none;
-  stroke: rgba(148, 163, 184, 0.36);
-  stroke-width: 1.8px;
+  stroke: rgba(148, 163, 184, 0.24);
+  stroke-width: 0.6px;
 }
 .tree-link.is-selected {
   stroke: rgba(59, 130, 246, 0.95);
-  stroke-width: 1.4px;
+  stroke-width: 0.8px;
 }
 .flow-link {
   fill: none;
-  stroke: rgba(37, 99, 235, 0.82);
-  stroke-width: 2.8px;
+  stroke: rgba(37, 99, 235, 0.78);
+  stroke-width: 0.6px;
   stroke-linecap: round;
 }
 .flow-link--derived {
@@ -281,52 +281,52 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .flow-link--blocked { stroke: rgba(220, 38, 38, 0.88); }
 .flow-link--critical { stroke: rgba(220, 38, 38, 0.95); }
 .flow-link.is-selected {
-  stroke-width: 3.6px;
+  stroke-width: 0.8px;
 }
 .tree-node {
   cursor: default;
 }
 .tree-node__box {
   fill: rgba(255, 255, 255, 0.98);
-  stroke: rgba(15, 23, 42, 0.14);
-  stroke-width: 1.25px;
+  stroke: rgba(15, 23, 42, 0.12);
+  stroke-width: 0.95px;
   filter: drop-shadow(0 8px 18px rgba(32, 64, 120, 0.12));
 }
 .tree-node--root .tree-node__box {
   fill: rgba(219, 234, 254, 0.9);
-  stroke: rgba(59, 130, 246, 0.42);
+  stroke: rgba(59, 130, 246, 0.34);
 }
 .tree-node--group .tree-node__box {
   fill: rgba(245, 248, 255, 0.98);
-  stroke: rgba(96, 165, 250, 0.24);
+  stroke: rgba(96, 165, 250, 0.18);
 }
 .tree-node--project .tree-node__box {
   fill: rgba(255, 255, 255, 0.98);
 }
 .tree-node--agent .tree-node__box {
   fill: rgba(247, 244, 255, 0.98);
-  stroke: rgba(139, 92, 246, 0.28);
+  stroke: rgba(139, 92, 246, 0.20);
 }
 .tree-node--external_system .tree-node__box {
   fill: rgba(236, 254, 255, 0.98);
-  stroke: rgba(14, 165, 233, 0.45);
+  stroke: rgba(14, 165, 233, 0.30);
 }
 .tree-node__label {
   fill: var(--text);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   text-anchor: middle;
   pointer-events: none;
 }
 .tree-node__meta {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: 8.5px;
   text-anchor: middle;
   pointer-events: none;
 }
 .tree-node__toggle {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   pointer-events: none;
 }
@@ -573,9 +573,9 @@ body.splitter-dragging .splitter {
   stroke-linejoin: round;
 }
 .link-line {
-  stroke: rgba(37, 99, 235, 0.9);
-  stroke-width: 5px;
-  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.22));
+  stroke: rgba(37, 99, 235, 0.86);
+  stroke-width: 0.65px;
+  filter: none;
 }
 .link-hit {
   stroke: transparent;
@@ -583,15 +583,15 @@ body.splitter-dragging .splitter {
   cursor: pointer;
 }
 .edge-badge {
-  font-size: 9px;
+  font-size: 5.5px;
   font-weight: 800;
   letter-spacing: 0.02em;
   fill: #0f172a;
   paint-order: stroke;
   stroke: rgba(255,255,255,0.96);
-  stroke-width: 5px;
+  stroke-width: 2px;
   pointer-events: none;
-  filter: drop-shadow(0 2px 3px rgba(32, 64, 120, 0.10));
+  filter: none;
 }
 .edge-badge__title { display: block; }
 .edge-badge__meta { fill: var(--muted); font-size: 8.5px; font-weight: 600; letter-spacing: 0.04em; }
@@ -601,7 +601,7 @@ body.splitter-dragging .splitter {
 }
 .edge-group.selected .link-line {
   stroke: #0f172a;
-  stroke-width: 3.8px;
+  stroke-width: 0.8px;
 }
 .edge-group.selected .edge-badge { fill: #0f172a; }
 .edge-group.selected .edge-badge__meta { fill: #334155; }

@@ -1644,7 +1644,7 @@ function branchDirectionFor(projectId, index = 0) {
 
 function branchDistanceFor(node) {
   const depth = node?.depth || 1;
-  return 150 + Math.max(0, depth - 1) * 24;
+  return 210 + Math.max(0, depth - 1) * 36;
 }
 
 function classifyHierarchyProject(project) {
@@ -1764,11 +1764,16 @@ function visibleProjectRefs(node) {
 function treeNodeMetrics(node) {
   const kind = node?.data?.kind || "project";
   const hasChildren = Boolean(node?.children?.length);
-  if (kind === "root") return { width: 220, height: 62, rx: 20 };
-  if (kind === "external_system") return { width: 190, height: 44, rx: 14 };
-  if (kind === "agent") return { width: 184, height: 44, rx: 14 };
-  if (hasChildren) return { width: 186, height: 48, rx: 14 };
-  return { width: 176, height: 42, rx: 14 };
+  const labelLen = String(node?.data?.label || "").length;
+  const roleLen = String(node?.data?.role || "").length;
+  const textWidth = Math.max(labelLen * 7.2, roleLen * 5.7);
+  const width = Math.min(420, Math.max(180, Math.ceil(textWidth + 56)));
+  const height = roleLen ? 60 : 46;
+  if (kind === "root") return { width: Math.max(260, width), height: 68, rx: 20 };
+  if (kind === "external_system") return { width: Math.max(220, width), height: 50, rx: 14 };
+  if (kind === "agent") return { width: Math.max(220, width), height: 50, rx: 14 };
+  if (hasChildren) return { width: Math.max(230, width), height, rx: 14 };
+  return { width, height, rx: 14 };
 }
 
 function renderNodeContents(selection) {
@@ -1803,15 +1808,15 @@ function renderNodeContents(selection) {
     node.append("text")
       .attr("class", "tree-node__label")
       .attr("x", toggleGlyph ? 8 : 0)
-      .attr("y", role ? -3 : 4)
+      .attr("y", role ? -6 : 4)
       .text(label);
 
     if (role && kind !== "root") {
       node.append("text")
         .attr("class", "tree-node__meta")
         .attr("x", 0)
-        .attr("y", 14)
-        .text(role.length > 34 ? `${role.slice(0, 31)}…` : role);
+        .attr("y", 18)
+        .text(role);
     }
   });
 }
@@ -1853,7 +1858,7 @@ function renderNetworkGraph() {
   const { width, height } = ensureGraphDimensions(el.graphViewport);
   const treeData = cloneHierarchyForCollapse(buildHierarchyTree(state.server.projects));
   const fullRoot = d3.hierarchy(treeData, (d) => d.children || null);
-  const rootCenter = { x: width / 2, y: height / 2 };
+  const rootCenter = { x: width / 2, y: height * 0.42 };
   const currentOffsets = state.nodeOffsets || (state.nodeOffsets = {});
   const getOffset = (id) => currentOffsets[id] || { dx: 0, dy: 0 };
   const addOffset = (id, dx, dy) => {
@@ -1863,7 +1868,7 @@ function renderNetworkGraph() {
     currentOffsets[id] = next;
   };
 
-  const treeLayout = d3.tree().nodeSize([84, 170]).separation((a, b) => (a.parent === b.parent ? 1.1 : 1.35));
+  const treeLayout = d3.tree().nodeSize([104, 220]).separation((a, b) => (a.parent === b.parent ? 1.08 : 1.32));
   const hierarchyNodes = [fullRoot];
   const hierarchyLinks = [];
   const positionMap = new Map();
@@ -1929,20 +1934,6 @@ function renderNetworkGraph() {
   const zoomLayer = root.append("g").attr("class", "zoom-layer");
   const layer = zoomLayer.append("g").attr("class", "tree-layer");
 
-  const defs = svg.append("defs");
-  defs
-    .append("marker")
-    .attr("id", "tree-arrowhead")
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 8)
-    .attr("refY", 0)
-    .attr("markerWidth", 3)
-    .attr("markerHeight", 3)
-    .attr("orient", "auto")
-    .append("path")
-    .attr("d", "M0,-5L10,0L0,5")
-    .attr("fill", "rgba(59, 130, 246, 0.72)");
-
   const zoom = d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => {
     zoomLayer.attr("transform", event.transform);
     state.currentGraphTransform = event.transform;
@@ -1980,7 +1971,6 @@ function renderNetworkGraph() {
     .attr("y1", (d) => d.source.y)
     .attr("x2", (d) => d.target.x)
     .attr("y2", (d) => d.target.y)
-    .attr("marker-end", "url(#tree-arrowhead)")
     .attr("stroke-dasharray", (d) => (d.data.status === "derived" ? "8 6" : null));
 
   flowLinkSelection
@@ -2155,20 +2145,6 @@ function renderCompassGraph() {
   const cx = width / 2;
   const cy = height / 2;
   const maxRadius = Math.min(width, height) * 0.34;
-
-  const defs = svg.append("defs");
-  defs
-    .append("marker")
-    .attr("id", "compass-arrowhead")
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 15)
-    .attr("refY", 0)
-    .attr("markerWidth", 5)
-    .attr("markerHeight", 5)
-    .attr("orient", "auto")
-    .append("path")
-    .attr("d", "M0,-5L10,0L0,5")
-    .attr("fill", "rgba(148, 163, 184, 0.55)");
 
   layer.append("circle").attr("class", "compass-ring compass-ring--outer").attr("cx", cx).attr("cy", cy).attr("r", maxRadius).attr("fill", "none");
   layer.append("circle").attr("class", "compass-ring compass-ring--mid").attr("cx", cx).attr("cy", cy).attr("r", maxRadius * 0.68).attr("fill", "none");
