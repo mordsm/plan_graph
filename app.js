@@ -1573,10 +1573,16 @@ function renderNetworkGraph() {
   if (!state.server || !el.graphSvg || !el.graphViewport) return;
   const { width, height } = ensureGraphDimensions(el.graphViewport);
   const { nodes, links } = getGraphData();
+  const layoutNodes = nodes.map((node) => ({
+    ...node,
+    x: Number.isFinite(node.position?.x) ? node.position.x : undefined,
+    y: Number.isFinite(node.position?.y) ? node.position.y : undefined,
+  }));
   const simulationLinks = links.map((link) => ({ ...link, source: link.source_node, target: link.target_node }));
   const svg = d3.select(el.graphSvg);
   svg.selectAll("*").remove();
   svg.attr("viewBox", `0 0 ${width} ${height}`);
+  svg.insert("rect", ":first-child").attr("class", "graph-pan-capture").attr("x", 0).attr("y", 0).attr("width", width).attr("height", height);
 
   const root = svg.append("g").attr("class", "graph-root");
   const zoomLayer = root.append("g").attr("class", "zoom-layer");
@@ -1634,7 +1640,7 @@ function renderNetworkGraph() {
     .attr("dy", "1.15em")
     .text((d) => formatEdgeBadge(d).meta);
 
-  const nodeGroup = zoomLayer.append("g").attr("class", "nodes").selectAll("g").data(nodes, (d) => d.node_id).join("g").attr("class", (d) => `node${state.selectedNodeId === d.node_id ? " selected" : ""}`);
+  const nodeGroup = zoomLayer.append("g").attr("class", "nodes").selectAll("g").data(layoutNodes, (d) => d.node_id).join("g").attr("class", (d) => `node${state.selectedNodeId === d.node_id ? " selected" : ""}`);
 
   nodeGroup
     .append("circle")
@@ -1673,7 +1679,7 @@ function renderNetworkGraph() {
 
   state.simulation?.stop?.();
   state.simulation = d3
-    .forceSimulation(nodes)
+    .forceSimulation(layoutNodes)
     .force("link", d3.forceLink(simulationLinks).id((d) => d.node_id).distance(120).strength(0.75))
     .force("charge", d3.forceManyBody().strength(-360))
     .force("center", d3.forceCenter(width / 2, height / 2))
@@ -1772,9 +1778,16 @@ function renderCompassGraph() {
   const svg = d3.select(el.compassSvg);
   svg.selectAll("*").remove();
   svg.attr("viewBox", `0 0 ${width} ${height}`);
+  svg.insert("rect", ":first-child").attr("class", "graph-pan-capture").attr("x", 0).attr("y", 0).attr("width", width).attr("height", height);
 
   const root = svg.append("g").attr("class", "graph-root compass-root");
-  const layer = root.append("g").attr("class", "compass-layer");
+  const zoomLayer = root.append("g").attr("class", "zoom-layer");
+  const layer = zoomLayer.append("g").attr("class", "compass-layer");
+  const zoom = d3.zoom().scaleExtent([0.45, 2.2]).on("zoom", (event) => {
+    zoomLayer.attr("transform", event.transform);
+  });
+  svg.call(zoom).on("dblclick.zoom", null);
+
   const cx = width / 2;
   const cy = height / 2;
   const maxRadius = Math.min(width, height) * 0.34;
