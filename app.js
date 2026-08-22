@@ -1587,7 +1587,7 @@ function renderNetworkGraph() {
   const root = svg.append("g").attr("class", "graph-root");
   const zoomLayer = root.append("g").attr("class", "zoom-layer");
 
-  const zoom = d3.zoom().scaleExtent([0.35, 2.5]).on("zoom", (event) => {
+  const zoom = d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => {
     zoomLayer.attr("transform", event.transform);
   });
   svg.call(zoom).on("dblclick.zoom", null);
@@ -1678,13 +1678,54 @@ function renderNetworkGraph() {
     .text((d) => d.label);
 
   state.simulation?.stop?.();
+  const bounds = layoutNodes.reduce(
+    (acc, node) => {
+      const x = Number.isFinite(node.x) ? node.x : width / 2;
+      const y = Number.isFinite(node.y) ? node.y : height / 2;
+      acc.minX = Math.min(acc.minX, x);
+      acc.minY = Math.min(acc.minY, y);
+      acc.maxX = Math.max(acc.maxX, x);
+      acc.maxY = Math.max(acc.maxY, y);
+      return acc;
+    },
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+  const boundsWidth = Math.max(1, bounds.maxX - bounds.minX);
+  const boundsHeight = Math.max(1, bounds.maxY - bounds.minY);
+  const padding = 120;
+  const fitScale = Math.min(width / (boundsWidth + padding), height / (boundsHeight + padding));
+  const targetScale = Math.max(0.9, Math.min(2.8, fitScale));
+  const targetX = width / 2 - ((bounds.minX + bounds.maxX) / 2) * targetScale;
+  const targetY = height / 2 - ((bounds.minY + bounds.maxY) / 2) * targetScale;
+
   state.simulation = d3
     .forceSimulation(layoutNodes)
-    .force("link", d3.forceLink(simulationLinks).id((d) => d.node_id).distance(120).strength(0.75))
-    .force("charge", d3.forceManyBody().strength(-360))
+    .force("link", d3.forceLink(simulationLinks).id((d) => d.node_id).distance(130).strength(0.8))
+    .force("charge", d3.forceManyBody().strength(-420))
     .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collision", d3.forceCollide().radius((d) => (d.node_type === "external_system" ? 36 : d.node_type === "agent" ? 40 : 48)))
-    .on("tick", ticked);
+    .force("collision", d3.forceCollide().radius((d) => (d.node_type === "external_system" ? 40 : d.node_type === "agent" ? 44 : 52)));
+  state.simulation.tick(120);
+  ticked();
+  state.simulation.stop();
+  const finalBounds = layoutNodes.reduce(
+    (acc, node) => {
+      const x = Number.isFinite(node.x) ? node.x : width / 2;
+      const y = Number.isFinite(node.y) ? node.y : height / 2;
+      acc.minX = Math.min(acc.minX, x);
+      acc.minY = Math.min(acc.minY, y);
+      acc.maxX = Math.max(acc.maxX, x);
+      acc.maxY = Math.max(acc.maxY, y);
+      return acc;
+    },
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+  const finalBoundsWidth = Math.max(1, finalBounds.maxX - finalBounds.minX);
+  const finalBoundsHeight = Math.max(1, finalBounds.maxY - finalBounds.minY);
+  const finalPadding = 120;
+  const finalScale = Math.max(1.1, Math.min(3, Math.min(width / (finalBoundsWidth + finalPadding), height / (finalBoundsHeight + finalPadding)) * 1.12));
+  const finalX = width / 2 - ((finalBounds.minX + finalBounds.maxX) / 2) * finalScale;
+  const finalY = height / 2 - ((finalBounds.minY + finalBounds.maxY) / 2) * finalScale - 40;
+  svg.call(zoom.transform, d3.zoomIdentity.translate(finalX, finalY).scale(finalScale));
 
   function ticked() {
     linkGroup
@@ -1919,7 +1960,7 @@ function renderCompassGraph() {
     state.selectedNodeId = null;
     state.selectedEdgeId = null;
     hideTooltip(el.compassTooltip);
-    renderCompassGraph();
+    renderNetworkGraph();
   });
 }
 
@@ -1982,7 +2023,7 @@ function render() {
   if (!state.server) return;
   updateServerHealth();
   renderTopbar();
-  renderCompassGraph();
+  renderNetworkGraph();
   if (state.draft) {
     renderDrawer();
     updatePatchPreview();

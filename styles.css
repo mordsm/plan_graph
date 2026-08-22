@@ -1,5 +1,5 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --bg: #eef4ff;
   --bg-2: #dfe9f9;
   --panel: #ffffff;
@@ -20,9 +20,9 @@
   --shadow: 0 20px 50px rgba(32, 64, 120, 0.16);
   --radius: 18px;
   --radius-sm: 12px;
-  --topbar-h: 132px;
+  --topbar-h: 94px;
   --splitter-width: 12px;
-  --drawer-width: 520px;
+  --drawer-width: 360px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
@@ -172,18 +172,16 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .task-chip strong { color: var(--warn); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
 
 .workspace {
-  height: calc(100% - var(--topbar-h) - 76px);
-  padding: 14px 18px 18px;
+  height: calc(100% - var(--topbar-h) - 54px);
+  padding: 10px 12px 12px;
 }
 .graph-panel {
   height: 100%;
   min-height: 0;
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background:
-    radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(18, 31, 57, 0.95), rgba(10, 18, 34, 0.9));
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(242, 248, 255, 0.94));
+  box-shadow: var(--shadow);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -193,18 +191,18 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  gap: 8px;
-  padding: 12px 14px 10px;
+  gap: 6px;
+  padding: 8px 12px 6px;
   border-bottom: 1px solid var(--line);
 }
-.graph-panel__header h2 { margin: 2px 0 0; font-size: 1rem; }
-.panel-hint { color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+.graph-panel__header h2 { margin: 1px 0 0; font-size: 0.96rem; }
+.panel-hint { color: var(--muted); font-size: 0.76rem; line-height: 1.25; }
 .graph-flow-summary {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 .graph-flow-summary__empty {
   color: var(--muted);
@@ -243,7 +241,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
   position: relative;
   flex: 1;
   min-height: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(241, 246, 255, 0.78));
+  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(241, 246, 255, 0.84));
 }
 #graphSvg, #compassSvg {
   width: 100%;
@@ -362,7 +360,7 @@ body.splitter-dragging .splitter {
 .drawer.open { transform: none; pointer-events: auto; }
 .drawer__shell {
   height: 100%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248, 251, 255, 0.94));
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248, 251, 255, 0.96));
   border-left: 1px solid var(--line);
   box-shadow: var(--shadow);
   display: flex;
@@ -370,19 +368,19 @@ body.splitter-dragging .splitter {
   backdrop-filter: blur(16px);
 }
 .drawer__head {
-  padding: 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   display: flex;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
   align-items: flex-start;
 }
 .drawer__head h2 { margin: 3px 0 8px; font-size: 1.15rem; }
 .drawer__meta { color: var(--muted); font-size: 0.84rem; }
 .drawer__tabs {
   display: flex;
-  gap: 8px;
-  padding: 10px 14px 0;
+  gap: 6px;
+  padding: 8px 12px 0;
   flex-wrap: wrap;
 }
 .tab {
@@ -394,7 +392,7 @@ body.splitter-dragging .splitter {
   border-color: rgba(96, 165, 250, 0.42);
 }
 .drawer__body {
-  padding: 12px 14px 0;
+  padding: 10px 12px 0;
   overflow: auto;
   flex: 1;
 }
@@ -453,9 +451,9 @@ body.splitter-dragging .splitter {
 }
 .drawer__footer {
   border-top: 1px solid var(--line);
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 .summary {
   min-height: 20px;
@@ -481,8 +479,8 @@ body.splitter-dragging .splitter {
 
 .node circle {
   stroke: rgba(15, 23, 42, 0.16);
-  stroke-width: 1.6px;
-  filter: drop-shadow(0 6px 12px rgba(32, 64, 120, 0.18));
+  stroke-width: 1.8px;
+  filter: drop-shadow(0 6px 12px rgba(32, 64, 120, 0.16));
 }
 .node text {
   fill: #10223e;
@@ -494,9 +492,9 @@ body.splitter-dragging .splitter {
   stroke-linejoin: round;
 }
 .link-line {
-  stroke: rgba(37, 99, 235, 0.80);
-  stroke-width: 4.2px;
-  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.18));
+  stroke: rgba(37, 99, 235, 0.9);
+  stroke-width: 5px;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.22));
 }
 .link-hit {
   stroke: transparent;
@@ -507,12 +505,12 @@ body.splitter-dragging .splitter {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  fill: #10223e;
+  fill: #0f172a;
   paint-order: stroke;
-  stroke: rgba(255,255,255,0.95);
+  stroke: rgba(255,255,255,0.96);
   stroke-width: 5px;
   pointer-events: none;
-  filter: drop-shadow(0 2px 3px rgba(32, 64, 120, 0.12));
+  filter: drop-shadow(0 2px 3px rgba(32, 64, 120, 0.10));
 }
 .edge-badge__title { display: block; }
 .edge-badge__meta { fill: var(--muted); font-size: 8.5px; font-weight: 600; letter-spacing: 0.04em; }
