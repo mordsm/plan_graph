@@ -229,7 +229,7 @@ function normalizeState(raw) {
   const next = clone(raw);
   next.state ??= {};
   next.meta_window ??= {};
-  next.meta_window.graph ??= { nodes: [], edges: [], layout: { engine: "d3-force", version: "1" } };
+  next.meta_window.graph ??= { nodes: [], edges: [], layout: { engine: "d3-tree", version: "1" } };
   next.meta_window.health ??= {
     status: "unknown",
     checked_at_utc: nowUtc(),
@@ -242,7 +242,7 @@ function normalizeState(raw) {
   next.projects ??= [];
   next.projects = next.projects.map(normalizeProject);
   if (!next.meta_window.graph.layout) {
-    next.meta_window.graph.layout = { engine: "d3-force", version: "1" };
+    next.meta_window.graph.layout = { engine: "d3-tree", version: "1" };
   }
   return next;
 }
@@ -1568,17 +1568,276 @@ function getGraphData() {
   const links = mergeGraphEdges(baseEdges, derivedEdges);
   return { nodes, links };
 }
+const HIERARCHY_GROUPS = [
+  { id: "sources", label: "Sources", projectIds: ["isracard_mail"] },
+  { id: "mail", label: "Mail", projectIds: ["mail_manager"] },
+  { id: "economic", label: "Economic", projectIds: ["economic_manager"] },
+  { id: "self_management", label: "Self Management", projectIds: ["self_manager"] },
+  { id: "assessment", label: "Assessment", projectIds: ["assessment"] },
+  { id: "administrative", label: "Administrative", projectIds: ["administrative"] },
+];
+
+function classifyHierarchyProject(project) {
+  const projectId = project?.identity_and_role?.project_id || "";
+  if (projectId === "isracard_mail") return "external_system";
+  const name = String(project?.identity_and_role?.name || projectId || "").toLowerCase();
+  if (name.includes("mail") || projectId.includes("mail")) return "agent";
+  if (name.includes("manager") || projectId.includes("manager")) return "agent";
+  return "project";
+}
+
+function childProjectList(project) {
+  return [
+    ...(Array.isArray(project?.subprojects) ? project.subprojects : []),
+    ...(Array.isArray(project?.children) ? project.children : []),
+    ...(Array.isArray(project?.subproject) ? project.subproject : []),
+  ].filter(Boolean);
+}
+
+function buildHierarchyProjectNode(project) {
+  const identity = project?.identity_and_role || {};
+  const childProjects = childProjectList(project);
+  const node = {
+    id: identity.project_id || uuid("project"),
+    label: identity.name || identity.project_id || "Project",
+    project_ref: identity.project_id || null,
+    kind: classifyHierarchyProject(project),
+    status: identity.operational_status || "idle",
+    role: identity.role || "",
+    description: identity.description || "",
+  };
+  if (childProjects.length) {
+    node.children = childProjects.map(buildHierarchyProjectNode);
+  }
+  return node;
+}
+
+function buildHierarchyTree(projects = []) {
+  const byId = new Map((projects || []).map((project) => [project?.identity_and_role?.project_id, project]).filter(([id]) => Boolean(id)));
+  const rootProject = byId.get("compass");
+  const used = new Set(["compass"]);
+  const root = {
+    id: "compass",
+    label: rootProject?.identity_and_role?.name || "Compass",
+    project_ref: "compass",
+    kind: "root",
+    status: rootProject?.identity_and_role?.operational_status || "active",
+    role: rootProject?.identity_and_role?.role || "Platform hub",
+    description: rootProject?.identity_and_role?.description || "Compass orchestration hub.",
+    children: [],
+  };
+
+  for (const group of HIERARCHY_GROUPS) {
+    const groupChildren = [];
+    for (const projectId of group.projectIds) {
+      const project = byId.get(projectId);
+      if (!project) continue;
+      used.add(projectId);
+      groupChildren.push(buildHierarchyProjectNode(project));
+    }
+    if (groupChildren.length) {
+      root.children.push({
+        id: `group:${group.id}`,
+        label: group.label,
+        kind: "group",
+        status: "idle",
+        role: group.label,
+        description: `${group.label} domain`,
+        children: groupChildren,
+      });
+    }
+  }
+
+  const remainingProjects = (projects || []).filter((project) => {
+    const id = project?.identity_and_role?.project_id;
+    return id && !used.has(id);
+  });
+
+  if (remainingProjects.length) {
+    root.children.push({
+      id: "group:other",
+      label: "Other",
+      kind: "group",
+      status: "idle",
+      role: "Other",
+      description: "Projects that do not fit a named domain group.",
+      children: remainingProjects.map(buildHierarchyProjectNode),
+    });
+  }
+
+  return root;
+}
+
+function cloneHierarchyForCollapse(node) {
+  if (!node) return null;
+  const next = { ...node };
+  const children = Array.isArray(node.children) ? node.children : [];
+  if (state.collapsedHierarchy?.[node.id]) {
+    next.children = [];
+    return next;
+  }
+  if (children.length) {
+    next.children = children.map(cloneHierarchyForCollapse);
+  } else {
+    delete next.children;
+  }
+  return next;
+}
+
+function hierarchyNodeKey(node) {
+  return node?.data?.project_ref || node?.data?.id || "";
+}
+
+function hierarchyTooltipPayload(node) {
+  const data = node?.data || node || {};
+  return {
+    label: data.label || data.name || data.project_ref || data.id || "Node",
+    node_type: data.kind || data.node_type || "project",
+    project_ref: data.project_ref || data.id || "",
+    status: data.status || "unknown",
+  };
+}
+
+function hierarchyRelatedIds(node) {
+  if (!node) return new Set();
+  const ids = new Set();
+  for (const ancestor of node.ancestors()) ids.add(hierarchyNodeKey(ancestor));
+  for (const descendant of node.descendants()) ids.add(hierarchyNodeKey(descendant));
+  ids.delete("");
+  return ids;
+}
+
+function visibleProjectRefs(node) {
+  const refs = new Set();
+  for (const descendant of node.descendants()) {
+    if (descendant.data?.project_ref) refs.add(descendant.data.project_ref);
+  }
+  return refs;
+}
+
+function treeNodeMetrics(node) {
+  const kind = node?.data?.kind || "project";
+  const hasChildren = Boolean(node?.children?.length);
+  if (kind === "root") return { width: 220, height: 64, rx: 20, padX: 18 };
+  if (kind === "group") return { width: 200, height: 54, rx: 18, padX: 18 };
+  if (kind === "external_system") return { width: 182, height: 44, rx: 14, padX: 16 };
+  if (hasChildren) return { width: 182, height: 46, rx: 14, padX: 16 };
+  return { width: 176, height: 42, rx: 14, padX: 16 };
+}
+
+function renderNodeContents(selection) {
+  selection.selectAll("*").remove();
+  selection.each(function (d) {
+    const node = d3.select(this);
+    const metrics = treeNodeMetrics(d);
+    const kind = d?.data?.kind || "project";
+    const hasChildren = Boolean(d?.children?.length);
+    const isCollapsed = Boolean(state.collapsedHierarchy?.[d?.data?.id]);
+    const toggleGlyph = kind === "group" || (hasChildren && d.depth > 0) ? (isCollapsed ? "▶" : "▼") : "";
+    const label = d?.data?.label || "Node";
+    const role = d?.data?.role || "";
+
+    node.append("rect")
+      .attr("class", "tree-node__box")
+      .attr("x", -metrics.width / 2)
+      .attr("y", -metrics.height / 2)
+      .attr("width", metrics.width)
+      .attr("height", metrics.height)
+      .attr("rx", metrics.rx)
+      .attr("ry", metrics.rx);
+
+    if (toggleGlyph) {
+      node.append("text")
+        .attr("class", "tree-node__toggle")
+        .attr("x", -metrics.width / 2 + 10)
+        .attr("y", -2)
+        .text(toggleGlyph);
+    }
+
+    node.append("text")
+      .attr("class", "tree-node__label")
+      .attr("x", toggleGlyph ? 8 : 0)
+      .attr("y", role ? -3 : 5)
+      .text(label);
+
+    if (role && kind !== "group") {
+      node.append("text")
+        .attr("class", "tree-node__meta")
+        .attr("x", 0)
+        .attr("y", 14)
+        .text(role.length > 36 ? `${role.slice(0, 33)}…` : role);
+    }
+
+    if (kind === "group") {
+      const childCount = d.children?.length || 0;
+      node.append("text")
+        .attr("class", "tree-node__meta")
+        .attr("x", 0)
+        .attr("y", 16)
+        .text(`${childCount} item${childCount === 1 ? "" : "s"}`);
+    }
+  });
+}
+
+function renderNodeClass(d) {
+  const kind = d?.data?.kind || "project";
+  return `tree-node tree-node--${kind}`;
+}
+
+function renderFlowLabel(edge) {
+  return `${edge.payload_format} • ${edge.protocol} • ${edge.channel_type}`;
+}
+
+function applyHierarchyHighlight(nodeSelection, linkSelection, flowSelection, focusNode, selectedNodeId, selectedEdgeId) {
+  const focusIds = focusNode ? hierarchyRelatedIds(focusNode) : new Set();
+  const focusProjectRefs = focusNode ? visibleProjectRefs(focusNode) : new Set();
+  const hasFocus = Boolean(focusNode);
+
+  nodeSelection.classed("is-selected", (d) => hierarchyNodeKey(d) === selectedNodeId || hierarchyNodeKey(d) === (focusNode ? hierarchyNodeKey(focusNode) : ""))
+    .classed("is-dimmed", (d) => hasFocus && !focusIds.has(hierarchyNodeKey(d)));
+
+  linkSelection.classed("is-selected", (d) => {
+      const sourceKey = hierarchyNodeKey(d.source);
+      const targetKey = hierarchyNodeKey(d.target);
+      return sourceKey === selectedNodeId || targetKey === selectedNodeId || (focusNode && (focusIds.has(sourceKey) || focusIds.has(targetKey)));
+    })
+    .classed("is-dimmed", (d) => hasFocus && !(focusIds.has(hierarchyNodeKey(d.source)) || focusIds.has(hierarchyNodeKey(d.target))));
+
+  flowSelection.classed("is-selected", (d) => d.data.edge_id === selectedEdgeId || (focusNode && (focusProjectRefs.has(d.data.source_node) || focusProjectRefs.has(d.data.target_node))))
+    .classed("is-dimmed", (d) => hasFocus && !(focusProjectRefs.has(d.data.source_node) || focusProjectRefs.has(d.data.target_node)));
+}
 
 function renderNetworkGraph() {
   if (!state.server || !el.graphSvg || !el.graphViewport) return;
+
   const { width, height } = ensureGraphDimensions(el.graphViewport);
-  const { nodes, links } = getGraphData();
-  const layoutNodes = nodes.map((node) => ({
-    ...node,
-    x: Number.isFinite(node.position?.x) ? node.position.x : undefined,
-    y: Number.isFinite(node.position?.y) ? node.position.y : undefined,
-  }));
-  const simulationLinks = links.map((link) => ({ ...link, source: link.source_node, target: link.target_node }));
+  const treeData = cloneHierarchyForCollapse(buildHierarchyTree(state.server.projects));
+  const treeRoot = d3.hierarchy(treeData, (d) => d.children || null);
+  const treeLayout = d3.tree().nodeSize([92, 250]).separation((a, b) => (a.parent === b.parent ? 1.1 : 1.45));
+  treeLayout(treeRoot);
+
+  const hierarchyNodes = treeRoot.descendants();
+  const hierarchyLinks = treeRoot.links();
+  const nodeMap = new Map(hierarchyNodes.map((node) => [hierarchyNodeKey(node), node]));
+  const { links: flowLinks } = getGraphData();
+  const visibleFlowLinks = flowLinks
+    .map((edge) => ({ data: edge, source: nodeMap.get(edge.source_node), target: nodeMap.get(edge.target_node) }))
+    .filter((edge) => edge.source && edge.target);
+
+  const bounds = hierarchyNodes.reduce(
+    (acc, node) => {
+      const metrics = treeNodeMetrics(node);
+      const x = node.y;
+      const y = node.x;
+      acc.minX = Math.min(acc.minX, x - metrics.width / 2);
+      acc.maxX = Math.max(acc.maxX, x + metrics.width / 2);
+      acc.minY = Math.min(acc.minY, y - metrics.height / 2);
+      acc.maxY = Math.max(acc.maxY, y + metrics.height / 2);
+      return acc;
+    },
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+
   const svg = d3.select(el.graphSvg);
   svg.selectAll("*").remove();
   svg.attr("viewBox", `0 0 ${width} ${height}`);
@@ -1587,168 +1846,121 @@ function renderNetworkGraph() {
   const root = svg.append("g").attr("class", "graph-root");
   const zoomLayer = root.append("g").attr("class", "zoom-layer");
 
-  const zoom = d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => {
-    zoomLayer.attr("transform", event.transform);
-  });
-  svg.call(zoom).on("dblclick.zoom", null);
-
   const defs = svg.append("defs");
   defs
     .append("marker")
-    .attr("id", "arrowhead")
+    .attr("id", "tree-arrowhead")
     .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 15)
+    .attr("refX", 16)
     .attr("refY", 0)
     .attr("markerWidth", 6)
     .attr("markerHeight", 6)
     .attr("orient", "auto")
     .append("path")
     .attr("d", "M0,-5L10,0L0,5")
-    .attr("fill", "rgba(148, 163, 184, 0.8)");
+    .attr("fill", "rgba(59, 130, 246, 0.72)");
 
-  const linkGroup = zoomLayer.append("g").attr("class", "links").selectAll("g").data(simulationLinks, (d) => d.edge_id).join("g").attr("class", (d) => `edge-group${state.selectedEdgeId === d.edge_id ? " selected" : ""}`);
+  defs
+    .append("marker")
+    .attr("id", "tree-linkhead")
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 16)
+    .attr("refY", 0)
+    .attr("markerWidth", 5)
+    .attr("markerHeight", 5)
+    .attr("orient", "auto")
+    .append("path")
+    .attr("d", "M0,-5L10,0L0,5")
+    .attr("fill", "rgba(148, 163, 184, 0.55)");
 
-  linkGroup
-    .append("line")
-    .attr("class", "link-line")
-    .attr("marker-end", "url(#arrowhead)")
-    .attr("stroke", (d) => getEdgeColor(d))
-    .attr("stroke-dasharray", (d) => getEdgeDash(d));
+  const zoom = d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => {
+    zoomLayer.attr("transform", event.transform);
+  });
+  svg.call(zoom).on("dblclick.zoom", null);
 
-  linkGroup
-    .append("line")
-    .attr("class", "link-hit")
+  const hierarchyLinkGenerator = d3.linkHorizontal().x((d) => d.y).y((d) => d.x);
+  const flowLinkGenerator = d3.linkHorizontal().x((d) => d.y).y((d) => d.x);
+
+  const hierarchyLinkSelection = zoomLayer
+    .append("g")
+    .attr("class", "hierarchy-links")
+    .selectAll("path")
+    .data(hierarchyLinks, (d) => `${hierarchyNodeKey(d.source)}->${hierarchyNodeKey(d.target)}`)
+    .join("path")
+    .attr("class", (d) => `tree-link${state.selectedNodeId === hierarchyNodeKey(d.source) || state.selectedNodeId === hierarchyNodeKey(d.target) ? " is-selected" : ""}`)
+    .attr("d", hierarchyLinkGenerator);
+
+  const flowLinkSelection = zoomLayer
+    .append("g")
+    .attr("class", "flow-links")
+    .selectAll("path")
+    .data(visibleFlowLinks, (d) => d.data.edge_id)
+    .join("path")
+    .attr("class", (d) => `flow-link flow-link--${d.data.status}${state.selectedEdgeId === d.data.edge_id ? " is-selected" : ""}`)
+    .attr("d", flowLinkGenerator)
+    .attr("marker-end", "url(#tree-arrowhead)")
     .on("click", (event, d) => {
       event.stopPropagation();
-      openEdgeDrawer(d.edge_id);
+      openEdgeDrawer(d.data.edge_id);
     })
-    .on("mouseenter", (event, d) => showEdgeTooltip(event, d, el.graphViewport, el.tooltip))
-    .on("mousemove", (event, d) => showEdgeTooltip(event, d, el.graphViewport, el.tooltip))
+    .on("mouseenter", (event, d) => showEdgeTooltip(event, d.data, el.graphViewport, el.tooltip))
+    .on("mousemove", (event, d) => showEdgeTooltip(event, d.data, el.graphViewport, el.tooltip))
     .on("mouseleave", () => hideTooltip(el.tooltip));
 
-  const edgeBadge = linkGroup.append("text").attr("class", "edge-badge");
-  edgeBadge
-    .append("tspan")
-    .attr("class", "edge-badge__title")
-    .attr("x", 0)
-    .attr("dy", 0)
-    .text((d) => formatEdgeBadge(d).title);
-  edgeBadge
-    .append("tspan")
-    .attr("class", "edge-badge__meta")
-    .attr("x", 0)
-    .attr("dy", "1.15em")
-    .text((d) => formatEdgeBadge(d).meta);
+  const nodeSelection = zoomLayer
+    .append("g")
+    .attr("class", "nodes")
+    .selectAll("g")
+    .data(hierarchyNodes, hierarchyNodeKey)
+    .join("g")
+    .attr("class", renderNodeClass)
+    .attr("transform", (d) => `translate(${d.y},${d.x})`);
 
-  const nodeGroup = zoomLayer.append("g").attr("class", "nodes").selectAll("g").data(layoutNodes, (d) => d.node_id).join("g").attr("class", (d) => `node${state.selectedNodeId === d.node_id ? " selected" : ""}`);
+  renderNodeContents(nodeSelection);
 
-  nodeGroup
-    .append("circle")
-    .attr("r", (d) => (d.node_type === "external_system" ? 16 : d.node_type === "agent" ? 18 : 22))
-    .attr("fill", (d) => getNodeColor(d))
+  nodeSelection
+    .style("cursor", (d) => {
+      const hasChildren = Boolean(d.children?.length);
+      return hasChildren && d.depth > 0 ? "pointer" : d.data.project_ref ? "pointer" : "default";
+    })
     .on("click", (event, d) => {
       event.stopPropagation();
-      if (d.project_ref) openProjectDrawer(d.project_ref);
+      const key = hierarchyNodeKey(d);
+      const hasChildren = Boolean(d.children?.length);
+      if (hasChildren && d.depth > 0) {
+        state.collapsedHierarchy[key] = !state.collapsedHierarchy[key];
+        state.selectedNodeId = key;
+        state.selectedEdgeId = null;
+        hideTooltip(el.tooltip);
+        renderNetworkGraph();
+        return;
+      }
+      if (d.data.project_ref) {
+        state.selectedNodeId = key;
+        state.selectedEdgeId = null;
+        openProjectDrawer(d.data.project_ref);
+      }
     })
-    .on("mouseenter", (event, d) => showNodeTooltip(event, d, el.graphViewport, el.tooltip))
-    .on("mousemove", (event, d) => showNodeTooltip(event, d, el.graphViewport, el.tooltip))
-    .on("mouseleave", () => hideTooltip(el.tooltip))
-    .call(
-      d3
-        .drag()
-        .on("start", (event, d) => {
-          if (!event.active) state.simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on("drag", (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on("end", (event, d) => {
-          if (!event.active) state.simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        }),
-    );
+    .on("mouseenter", (event, d) => {
+      applyHierarchyHighlight(nodeSelection, hierarchyLinkSelection, flowLinkSelection, d, state.selectedNodeId, state.selectedEdgeId);
+      showNodeTooltip(event, hierarchyTooltipPayload(d), el.graphViewport, el.tooltip);
+    })
+    .on("mousemove", (event, d) => showNodeTooltip(event, hierarchyTooltipPayload(d), el.graphViewport, el.tooltip))
+    .on("mouseleave", () => {
+      const selectedNode = state.selectedNodeId ? nodeMap.get(state.selectedNodeId) : null;
+      applyHierarchyHighlight(nodeSelection, hierarchyLinkSelection, flowLinkSelection, selectedNode || null, state.selectedNodeId, state.selectedEdgeId);
+      hideTooltip(el.tooltip);
+    });
 
-  nodeGroup
-    .append("text")
-    .attr("dy", 34)
-    .text((d) => d.label);
+  applyHierarchyHighlight(nodeSelection, hierarchyLinkSelection, flowLinkSelection, null, state.selectedNodeId, state.selectedEdgeId);
 
-  state.simulation?.stop?.();
-  const bounds = layoutNodes.reduce(
-    (acc, node) => {
-      const x = Number.isFinite(node.x) ? node.x : width / 2;
-      const y = Number.isFinite(node.y) ? node.y : height / 2;
-      acc.minX = Math.min(acc.minX, x);
-      acc.minY = Math.min(acc.minY, y);
-      acc.maxX = Math.max(acc.maxX, x);
-      acc.maxY = Math.max(acc.maxY, y);
-      return acc;
-    },
-    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-  );
-  const boundsWidth = Math.max(1, bounds.maxX - bounds.minX);
-  const boundsHeight = Math.max(1, bounds.maxY - bounds.minY);
-  const padding = 120;
-  const fitScale = Math.min(width / (boundsWidth + padding), height / (boundsHeight + padding));
-  const targetScale = Math.max(0.9, Math.min(2.8, fitScale));
-  const targetX = width / 2 - ((bounds.minX + bounds.maxX) / 2) * targetScale;
-  const targetY = height / 2 - ((bounds.minY + bounds.maxY) / 2) * targetScale;
-
-  state.simulation = d3
-    .forceSimulation(layoutNodes)
-    .force("link", d3.forceLink(simulationLinks).id((d) => d.node_id).distance(130).strength(0.8))
-    .force("charge", d3.forceManyBody().strength(-420))
-    .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collision", d3.forceCollide().radius((d) => (d.node_type === "external_system" ? 40 : d.node_type === "agent" ? 44 : 52)));
-  state.simulation.tick(120);
-  ticked();
-  state.simulation.stop();
-  const finalBounds = layoutNodes.reduce(
-    (acc, node) => {
-      const x = Number.isFinite(node.x) ? node.x : width / 2;
-      const y = Number.isFinite(node.y) ? node.y : height / 2;
-      acc.minX = Math.min(acc.minX, x);
-      acc.minY = Math.min(acc.minY, y);
-      acc.maxX = Math.max(acc.maxX, x);
-      acc.maxY = Math.max(acc.maxY, y);
-      return acc;
-    },
-    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-  );
-  const finalBoundsWidth = Math.max(1, finalBounds.maxX - finalBounds.minX);
-  const finalBoundsHeight = Math.max(1, finalBounds.maxY - finalBounds.minY);
-  const finalPadding = 120;
-  const finalScale = Math.max(1.1, Math.min(3, Math.min(width / (finalBoundsWidth + finalPadding), height / (finalBoundsHeight + finalPadding)) * 1.12));
-  const finalX = width / 2 - ((finalBounds.minX + finalBounds.maxX) / 2) * finalScale;
-  const finalY = height / 2 - ((finalBounds.minY + finalBounds.maxY) / 2) * finalScale - 40;
+  const graphBoundsWidth = Math.max(1, bounds.maxX - bounds.minX);
+  const graphBoundsHeight = Math.max(1, bounds.maxY - bounds.minY);
+  const fitScale = Math.min(width / (graphBoundsWidth + 150), height / (graphBoundsHeight + 110));
+  const finalScale = Math.max(0.95, Math.min(3, fitScale * 1.14));
+  const finalX = width / 2 - ((bounds.minX + bounds.maxX) / 2) * finalScale;
+  const finalY = height / 2 - ((bounds.minY + bounds.maxY) / 2) * finalScale - 12;
   svg.call(zoom.transform, d3.zoomIdentity.translate(finalX, finalY).scale(finalScale));
-
-  function ticked() {
-    linkGroup
-      .select("line.link-line")
-      .attr("x1", (d) => d.source.x)
-      .attr("y1", (d) => d.source.y)
-      .attr("x2", (d) => d.target.x)
-      .attr("y2", (d) => d.target.y);
-
-    linkGroup
-      .select("line.link-hit")
-      .attr("x1", (d) => d.source.x)
-      .attr("y1", (d) => d.source.y)
-      .attr("x2", (d) => d.target.x)
-      .attr("y2", (d) => d.target.y);
-
-    linkGroup
-      .select("text.edge-badge")
-      .attr("transform", (d) => `translate(${(d.source.x + d.target.x) / 2}, ${(d.source.y + d.target.y) / 2 - 6})`)
-      .attr("text-anchor", "middle");
-
-    nodeGroup.attr("transform", (d) => `translate(${d.x},${d.y})`);
-  }
 
   root.on("click", () => {
     state.selectedNodeId = null;
