@@ -109,7 +109,7 @@ const PROCESS_SCENARIOS = [
     "id": "gpt_actions_assessment_review",
     "name": "GPT Actions → Assessment review / בדיקת הערכה",
     "trigger": "gpt_actions",
-    "ingressLabel": "GPT Actions",
+    "ingressLabel": "GPT",
     "token": {
       "label": "GPT",
       "compact": "Action",
@@ -118,7 +118,7 @@ const PROCESS_SCENARIOS = [
     "event": {
       "event_id": "evt_gpt_assessment_001",
       "event_type": "gpt_action_assessment_review",
-      "source": "gpt_actions",
+      "source": "gpt",
       "target": "compass",
       "created_at": "2026-08-23T11:45:00Z",
       "status": "processing",
@@ -133,11 +133,11 @@ const PROCESS_SCENARIOS = [
     "steps": [
       {
         "id": "accept_gpt_action",
-        "node": "compass",
+        "node": "gpt",
         "label": "Receive",
         "tokenLabel": "GPT Action",
         "tokenGlyph": "🤖",
-        "explanation": "Compass receives the GPT Actions request and prepares to orchestrate the review flow.",
+        "explanation": "GPT receives the GPT Actions request and prepares to orchestrate the review flow.",
         "findings": [
           "Ingress: GPT Actions",
           "Target: Compass",
@@ -217,8 +217,8 @@ const PROCESS_SCENARIOS = [
     "actionLog": [
       {
         "action": "accept_gpt_action",
-        "actor": "Compass",
-        "cause": "gpt_actions",
+        "actor": "GPT",
+        "cause": "gpt",
         "input": "request: review assessment result; subject: customer score; priority: high",
         "result": "Receive",
         "status": "completed",
@@ -271,7 +271,7 @@ const PROCESS_SCENARIOS = [
     "id": "gpt_actions_administrative_request",
     "name": "GPT Actions → Administrative request / בקשה מנהלית",
     "trigger": "gpt_actions",
-    "ingressLabel": "GPT Actions",
+    "ingressLabel": "GPT",
     "token": {
       "label": "GPT",
       "compact": "Action",
@@ -280,7 +280,7 @@ const PROCESS_SCENARIOS = [
     "event": {
       "event_id": "evt_gpt_admin_001",
       "event_type": "gpt_action_administrative_request",
-      "source": "gpt_actions",
+      "source": "gpt",
       "target": "compass",
       "created_at": "2026-08-23T11:55:00Z",
       "status": "processing",
@@ -295,11 +295,11 @@ const PROCESS_SCENARIOS = [
     "steps": [
       {
         "id": "accept_admin_request",
-        "node": "compass",
+        "node": "gpt",
         "label": "Receive",
         "tokenLabel": "GPT Action",
         "tokenGlyph": "🤖",
-        "explanation": "Compass receives a GPT Actions request for an administrative follow-up.",
+        "explanation": "GPT receives a GPT Actions request for an administrative follow-up.",
         "findings": [
           "Ingress: GPT Actions",
           "Target: Compass",
@@ -379,8 +379,8 @@ const PROCESS_SCENARIOS = [
     "actionLog": [
       {
         "action": "accept_admin_request",
-        "actor": "Compass",
-        "cause": "gpt_actions",
+        "actor": "GPT",
+        "cause": "gpt",
         "input": "request: prepare administrative follow-up; topic: document routing; priority: medium",
         "result": "Receive",
         "status": "completed",
@@ -3542,13 +3542,14 @@ const HIERARCHY_GROUPS = [
 ];
 
 const HIERARCHY_BRANCH_DIRECTIONS = {
-  isracard_mail: { vx: 0.72, vy: -0.7 },
-  mail_manager: { vx: 0.1, vy: -1 },
-  economic_manager: { vx: 1, vy: 0.05 },
-  assessment: { vx: -1, vy: 0.05 },
-  rules_engine: { vx: 0.55, vy: 0.85 },
-  self_manager: { vx: 0.15, vy: 1 },
-  administrative: { vx: -0.72, vy: 0.72 },
+  gpt: { vx: -0.96, vy: -0.28 },
+  isracard_mail: { vx: -0.92, vy: 0.06 },
+  mail_manager: { vx: -0.82, vy: 0.34 },
+  assessment: { vx: -0.68, vy: 0.68 },
+  self_manager: { vx: -0.34, vy: 0.94 },
+  administrative: { vx: -0.06, vy: 1 },
+  economic_manager: { vx: 0.96, vy: -0.08 },
+  rules_engine: { vx: 0.82, vy: 0.56 },
 };
 
 function normalizeVector(vector) {
@@ -3569,12 +3570,12 @@ function branchDirectionFor(projectId, index = 0) {
 
 function branchDistanceFor(node) {
   const depth = node?.depth || 1;
-  return 210 + Math.max(0, depth - 1) * 36;
+  return 245 + Math.max(0, depth - 1) * 46;
 }
 
 function classifyHierarchyProject(project) {
   const projectId = project?.identity_and_role?.project_id || "";
-  if (projectId === "isracard_mail") return "external_system";
+  if (projectId === "isracard_mail" || projectId === "gpt") return "external_system";
   const name = String(project?.identity_and_role?.name || projectId || "").toLowerCase();
   if (name.includes("mail") || projectId.includes("mail")) return "agent";
   if (name.includes("manager") || projectId.includes("manager")) return "agent";
@@ -3623,7 +3624,7 @@ function buildHierarchyTree(projects = []) {
     children: [],
   };
 
-  const orderedIds = ["isracard_mail", "mail_manager", "economic_manager", "assessment", "rules_engine", "self_manager", "administrative"];
+  const orderedIds = ["gpt", "isracard_mail", "mail_manager", "assessment", "self_manager", "administrative", "economic_manager", "rules_engine"];
   const rest = (projects || [])
     .filter((project) => project?.identity_and_role?.project_id && project.identity_and_role.project_id !== "compass")
     .sort((a, b) => {
@@ -3793,7 +3794,7 @@ function renderNetworkGraph() {
     currentOffsets[id] = next;
   };
 
-  const treeLayout = d3.tree().nodeSize([104, 220]).separation((a, b) => (a.parent === b.parent ? 1.08 : 1.32));
+  const treeLayout = d3.tree().nodeSize([116, 240]).separation((a, b) => (a.parent === b.parent ? 1.12 : 1.36));
   const hierarchyNodes = [fullRoot];
   const hierarchyLinks = [];
   const positionMap = new Map();

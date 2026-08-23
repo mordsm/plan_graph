@@ -394,6 +394,60 @@
     },
     {
       "identity_and_role": {
+        "project_id": "gpt",
+        "name": "GPT",
+        "description": "External GPT Actions ingress node that forwards user prompts into Compass.",
+        "role": "Receives GPT Actions requests and forwards them to Compass orchestration.",
+        "operational_status": "active"
+      },
+      "interfaces_and_flows": {
+        "inputs": [],
+        "outputs": [
+          {
+            "target_node": "compass",
+            "payload_format": "JSON",
+            "protocol": "internal",
+            "channel": "gpt.to.compass",
+            "required": true
+          }
+        ],
+        "external_apis": [
+          {
+            "endpoint_name": "GPT Actions Bridge",
+            "base_url": null,
+            "trigger_mode": "event",
+            "auth_requirements": "User-authenticated GPT Actions session.",
+            "rate_limit": null
+          }
+        ]
+      },
+      "scheduler": {
+        "cron_expression": null,
+        "next_run_utc": null,
+        "execution_type": "manual_run",
+        "requires_manual_login": true,
+        "timezone": "UTC"
+      },
+      "roadmap_and_tasks": [
+        {
+          "task_id": "task_gpt_actions_bridge",
+          "title": "Keep GPT Actions bridge wired into Compass",
+          "type": "integration_task",
+          "status": "planned",
+          "priority": "medium",
+          "show_in_meta": true,
+          "blocked_reason": null,
+          "due_at_utc": null
+        }
+      ],
+      "export_and_commit": {
+        "patch_protocol": "json_patch_rfc6902",
+        "last_patch": null,
+        "commit_message_template": "Update gpt: {summary}"
+      }
+    },
+    {
+      "identity_and_role": {
         "project_id": "mail_manager",
         "name": "Mail Manager",
         "description": "Agent that fetches relevant messages, extracts attachments, and normalizes statement artifacts.",
