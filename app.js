@@ -84,6 +84,7 @@ const state = {
   docsFolderHandle: null,
   docsFileHandles: {},
   renderFrame: null,
+  dragSession: null,
   process: {
     mode: "demo",
     scenarioId: "gpt_actions_assessment_review",
@@ -3899,10 +3900,18 @@ function renderNetworkGraph(options = {}) {
   const zoomLayer = root.append("g").attr("class", "zoom-layer");
   const layer = zoomLayer.append("g").attr("class", "tree-layer");
 
-  const zoom = d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => {
-    zoomLayer.attr("transform", event.transform);
-    state.currentGraphTransform = event.transform;
-  });
+  const zoom = d3.zoom()
+    .filter((event) => {
+      const target = event?.target;
+      const interactive = target instanceof Element && !!target.closest?.(".tree-node, .link-hit, .flow-link, .edge-group");
+      if (interactive && (event.type === "mousedown" || event.type === "pointerdown" || event.type === "touchstart")) return false;
+      return !event.ctrlKey && !event.button;
+    })
+    .scaleExtent([0.35, 3])
+    .on("zoom", (event) => {
+      zoomLayer.attr("transform", event.transform);
+      state.currentGraphTransform = event.transform;
+    });
   svg.call(zoom).on("dblclick.zoom", null);
   state.currentGraphTransform = state.currentGraphTransform || d3.zoomIdentity;
 
@@ -3974,23 +3983,46 @@ function renderNetworkGraph(options = {}) {
 
   renderNodeContents(nodeSelection);
 
-  const dragBehavior = d3.drag()
-    .on("start", (event) => {
-      event.sourceEvent?.stopPropagation?.();
-      state.userAdjustedLayout = true;
-    })
-    .on("drag", (event, d) => {
-      const scale = state.currentGraphTransform?.k || 1;
-      addOffset(hierarchyNodeKey(d), event.dx / scale, event.dy / scale);
-      renderNetworkGraph({ autoFit: false });
-    })
-    .on("end", () => {
-      renderNetworkGraph({ autoFit: false });
-    });
-
-  nodeSelection
+    nodeSelection
     .style("cursor", (d) => (d.data.project_ref ? "grab" : "default"))
-    .call(dragBehavior)
+    .on("pointerdown", function (event, d) {
+      if (!d.data.project_ref) return;
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      state.userAdjustedLayout = true;
+      const key = hierarchyNodeKey(d);
+      const display = d.__display || positionMap.get(key) || rootDisplay;
+      const session = {
+        key,
+        baseX: display.x,
+        baseY: display.y,
+        dx: 0,
+        dy: 0,
+        selection: d3.select(this),
+      };
+      state.dragSession = session;
+      const onMove = (moveEvent) => {
+        if (!state.dragSession || state.dragSession.key !== key) return;
+        const scale = state.currentGraphTransform?.k || 1;
+        session.dx += (moveEvent.movementX || 0) / scale;
+        session.dy += (moveEvent.movementY || 0) / scale;
+        session.selection.attr("transform", `translate(${session.baseX + session.dx},${session.baseY + session.dy})`);
+      };
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove, true);
+        window.removeEventListener("pointerup", onUp, true);
+        const moved = Math.abs(session.dx) + Math.abs(session.dy) > 0.5;
+        if (moved && state.dragSession && state.dragSession.key === key) {
+          addOffset(key, session.dx, session.dy);
+          state.dragSession = null;
+          renderNetworkGraph({ autoFit: false });
+        } else {
+          state.dragSession = null;
+        }
+      };
+      window.addEventListener("pointermove", onMove, true);
+      window.addEventListener("pointerup", onUp, true);
+    })
     .on("click", (event, d) => {
       event.stopPropagation();
       const key = hierarchyNodeKey(d);
