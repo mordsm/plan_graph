@@ -1,10 +1,9 @@
 {
-  "app_title": "Compass Ecosystem",
+  "app_title": "Plan Graph",
   "state_source": "examples/compass-ecosystem.sample.json",
-  "storage_prefix": "compass-ecosystem",
-  "default_view": "compass-network",
+  "storage_prefix": "plan-graph",
+  "default_view": "meta-window",
   "allow_state_query_param": true,
   "set_manifest": "sets/index.json",
-  "default_set": "compass-core",
-  "docs_manifest": "docs/index.json"
+  "default_set": "music_mentor"
 }

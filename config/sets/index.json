@@ -1,11 +1,17 @@
 {
-  "default_set": "compass-core",
+  "default_set": "music_mentor",
   "sets": [
+    {
+      "key": "music_mentor",
+      "label": "Music Mentor",
+      "config_url": "music_mentor.config.json",
+      "description": "Music learning and practice planning hub."
+    },
     {
       "key": "compass-core",
       "label": "Compass Core",
       "config_url": "compass-core.config.json",
-      "description": "Compass hub with self_manager, assessment, and administrative parts."
+      "description": "Current Compass hub with self_manager, assessment, and administrative parts."
     }
   ]
 }

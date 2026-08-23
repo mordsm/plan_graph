@@ -1,0 +1,9 @@
+{
+  "app_title": "Music Mentor",
+  "state_source": "examples/music_mentor.sample.json",
+  "storage_prefix": "music-mentor",
+  "default_view": "meta-window",
+  "allow_state_query_param": true,
+  "set_manifest": "index.json",
+  "default_set": "music_mentor"
+}

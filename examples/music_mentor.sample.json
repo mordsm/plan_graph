@@ -1,0 +1,337 @@
+{
+  "schema_version": "1.0.0",
+  "state": {
+    "ecosystem_id": "music_mentor_ecosystem",
+    "revision": 1,
+    "updated_at_utc": "2026-08-23T19:52:39Z",
+    "updated_by": "codex",
+    "lock": {
+      "mode": "optimistic",
+      "owner": null,
+      "expires_at_utc": null
+    }
+  },
+  "meta_window": {
+    "graph": {
+      "nodes": [
+        {
+          "node_id": "music_mentor",
+          "node_type": "project",
+          "label": "Music Mentor",
+          "project_ref": "music_mentor",
+          "status": "active",
+          "position": {
+            "x": 560,
+            "y": 280,
+            "pinned": true
+          },
+          "tags": [
+            "music",
+            "learning",
+            "hub"
+          ]
+        },
+        {
+          "node_id": "lesson_planner",
+          "node_type": "project",
+          "label": "Lesson Planner",
+          "project_ref": "lesson_planner",
+          "status": "active",
+          "position": {
+            "x": 820,
+            "y": 190,
+            "pinned": true
+          },
+          "tags": [
+            "practice",
+            "schedule",
+            "lessons"
+          ]
+        },
+        {
+          "node_id": "practice_log",
+          "node_type": "project",
+          "label": "Practice Log",
+          "project_ref": "practice_log",
+          "status": "active",
+          "position": {
+            "x": 820,
+            "y": 390,
+            "pinned": true
+          },
+          "tags": [
+            "progress",
+            "journal",
+            "feedback"
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "edge_id": "edge_practice_log_to_music_mentor",
+          "label": "Practice JSON",
+          "source_node": "practice_log",
+          "target_node": "music_mentor",
+          "channel_type": "direct_push",
+          "payload_format": "JSON",
+          "protocol": "internal",
+          "status": "healthy",
+          "last_success_at_utc": "2026-08-23T19:52:39Z"
+        },
+        {
+          "edge_id": "edge_music_mentor_to_lesson_planner",
+          "label": "Lesson Plan",
+          "source_node": "music_mentor",
+          "target_node": "lesson_planner",
+          "channel_type": "direct_push",
+          "payload_format": "JSON",
+          "protocol": "internal",
+          "status": "healthy",
+          "last_success_at_utc": "2026-08-23T19:52:39Z"
+        },
+        {
+          "edge_id": "edge_lesson_planner_to_practice_log",
+          "label": "Session Log",
+          "source_node": "lesson_planner",
+          "target_node": "practice_log",
+          "channel_type": "direct_push",
+          "payload_format": "JSON",
+          "protocol": "internal",
+          "status": "healthy",
+          "last_success_at_utc": "2026-08-23T19:52:39Z"
+        }
+      ],
+      "layout": {
+        "engine": "manual",
+        "version": "1",
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
+      }
+    },
+    "health": {
+      "status": "healthy",
+      "checked_at_utc": "2026-08-23T19:52:39Z",
+      "active_projects": 3,
+      "blocked_tasks": 0,
+      "open_alerts": 0
+    },
+    "alerts": [],
+    "meta_tasks": [
+      {
+        "project_id": "music_mentor",
+        "task_id": "task_refresh_song_goals",
+        "title": "Refresh weekly music goals",
+        "priority": "high",
+        "status": "planned"
+      },
+      {
+        "project_id": "lesson_planner",
+        "task_id": "task_refine_practice_flow",
+        "title": "Refine practice flow and lesson order",
+        "priority": "medium",
+        "status": "planned"
+      }
+    ]
+  },
+  "projects": [
+    {
+      "identity_and_role": {
+        "project_id": "music_mentor",
+        "name": "Music Mentor",
+        "description": "Hebrew-first music learning hub that turns goals into practice loops.",
+        "role": "Main hub for lesson planning, feedback, and progress summaries.",
+        "operational_status": "active"
+      },
+      "interfaces_and_flows": {
+        "inputs": [
+          {
+            "source_node": "practice_log",
+            "payload_format": "JSON",
+            "protocol": "internal",
+            "channel": "practice updates",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "target_node": "lesson_planner",
+            "payload_format": "JSON",
+            "protocol": "internal",
+            "channel": "lesson plan",
+            "required": true
+          }
+        ],
+        "external_apis": [
+          {
+            "endpoint_name": "Playlist sync export",
+            "base_url": null,
+            "trigger_mode": "manual",
+            "auth_requirements": "Google account token or manual export file",
+            "rate_limit": null
+          }
+        ]
+      },
+      "scheduler": {
+        "cron_expression": null,
+        "next_run_utc": null,
+        "execution_type": "not_scheduled",
+        "requires_manual_login": false,
+        "timezone": "UTC"
+      },
+      "roadmap_and_tasks": [
+        {
+          "task_id": "task_refresh_song_goals",
+          "title": "Refresh weekly music goals",
+          "type": "roadmap_task",
+          "status": "planned",
+          "priority": "high",
+          "show_in_meta": true,
+          "blocked_reason": null,
+          "due_at_utc": null
+        },
+        {
+          "task_id": "task_collect_practice_feedback",
+          "title": "Collect practice feedback after each session",
+          "type": "roadmap_task",
+          "status": "planned",
+          "priority": "medium",
+          "show_in_meta": false,
+          "blocked_reason": null,
+          "due_at_utc": null
+        }
+      ],
+      "export_and_commit": {
+        "patch_protocol": "json_patch_rfc6902",
+        "last_patch": null,
+        "commit_message_template": "Update music_mentor: {summary}"
+      }
+    },
+    {
+      "identity_and_role": {
+        "project_id": "lesson_planner",
+        "name": "Lesson Planner",
+        "description": "Builds a stable practice sequence from goals, time, and difficulty.",
+        "role": "Turns learning targets into day-by-day music practice plans.",
+        "operational_status": "active"
+      },
+      "interfaces_and_flows": {
+        "inputs": [
+          {
+            "source_node": "music_mentor",
+            "payload_format": "JSON",
+            "protocol": "internal",
+            "channel": "lesson request",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "target_node": "practice_log",
+            "payload_format": "JSON",
+            "protocol": "internal",
+            "channel": "session log",
+            "required": true
+          }
+        ],
+        "external_apis": [
+          {
+            "endpoint_name": "Practice template generator",
+            "base_url": null,
+            "trigger_mode": "manual",
+            "auth_requirements": "None",
+            "rate_limit": null
+          }
+        ]
+      },
+      "scheduler": {
+        "cron_expression": null,
+        "next_run_utc": null,
+        "execution_type": "manual_run",
+        "requires_manual_login": false,
+        "timezone": "UTC"
+      },
+      "roadmap_and_tasks": [
+        {
+          "task_id": "task_refine_practice_flow",
+          "title": "Refine practice flow and lesson order",
+          "type": "roadmap_task",
+          "status": "planned",
+          "priority": "medium",
+          "show_in_meta": true,
+          "blocked_reason": null,
+          "due_at_utc": null
+        }
+      ],
+      "export_and_commit": {
+        "patch_protocol": "json_patch_rfc6902",
+        "last_patch": null,
+        "commit_message_template": "Update lesson_planner: {summary}"
+      }
+    },
+    {
+      "identity_and_role": {
+        "project_id": "practice_log",
+        "name": "Practice Log",
+        "description": "Stores practice sessions, tempos, and feedback for review.",
+        "role": "Records completed work and feeds progress back into Music Mentor.",
+        "operational_status": "active"
+      },
+      "interfaces_and_flows": {
+        "inputs": [
+          {
+            "source_node": "lesson_planner",
+            "payload_format": "JSON",
+            "protocol": "internal",
+            "channel": "session plan",
+            "required": true
+          }
+        ],
+        "outputs": [
+          {
+            "target_node": "music_mentor",
+            "payload_format": "JSON",
+            "protocol": "internal",
+            "channel": "progress summary",
+            "required": true
+          }
+        ],
+        "external_apis": [
+          {
+            "endpoint_name": "Practice journal export",
+            "base_url": null,
+            "trigger_mode": "manual",
+            "auth_requirements": "None",
+            "rate_limit": null
+          }
+        ]
+      },
+      "scheduler": {
+        "cron_expression": null,
+        "next_run_utc": null,
+        "execution_type": "not_scheduled",
+        "requires_manual_login": false,
+        "timezone": "UTC"
+      },
+      "roadmap_and_tasks": [
+        {
+          "task_id": "task_log_practice_sessions",
+          "title": "Log each practice session with time and tempo",
+          "type": "roadmap_task",
+          "status": "planned",
+          "priority": "low",
+          "show_in_meta": false,
+          "blocked_reason": null,
+          "due_at_utc": null
+        }
+      ],
+      "export_and_commit": {
+        "patch_protocol": "json_patch_rfc6902",
+        "last_patch": null,
+        "commit_message_template": "Update practice_log: {summary}"
+      }
+    }
+  ]
+}

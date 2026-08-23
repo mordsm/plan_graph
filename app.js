@@ -1,11 +1,11 @@
 const APP_DEFAULTS = {
   app_title: "Plan Graph",
-  state_source: "examples/compas-ecosystem.sample.json",
+  state_source: "examples/compass-ecosystem.sample.json",
   storage_prefix: "plan-graph",
   default_view: "meta-window",
   allow_state_query_param: true,
   set_manifest: "config/sets/index.json",
-  default_set: "compas-finance",
+  default_set: "compass-core",
 };
 
 const el = {
