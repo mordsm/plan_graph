@@ -17,6 +17,18 @@ const el = {
   alertsStat: document.getElementById("alertsStat"),
   blockedStat: document.getElementById("blockedStat"),
   metaTaskBar: document.getElementById("metaTaskBar"),
+  scenarioSelect: document.getElementById("scenarioSelect"),
+  demoModeButton: document.getElementById("demoModeButton"),
+  liveModeButton: document.getElementById("liveModeButton"),
+  restartScenarioButton: document.getElementById("restartScenarioButton"),
+  previousStepButton: document.getElementById("previousStepButton"),
+  playPauseButton: document.getElementById("playPauseButton"),
+  nextStepButton: document.getElementById("nextStepButton"),
+  scenarioSpeedSelect: document.getElementById("scenarioSpeedSelect"),
+  processBar: document.getElementById("processBar"),
+  stepExplanation: document.getElementById("stepExplanation"),
+  internalProcessView: document.getElementById("internalProcessView"),
+  currentStateSummary: document.getElementById("currentStateSummary"),
   setSelect: document.getElementById("setSelect"),
   refreshButton: document.getElementById("refreshButton"),
   addProjectButton: document.getElementById("addProjectButton"),
@@ -71,6 +83,15 @@ const state = {
   docsFolderHandle: null,
   docsFileHandles: {},
   renderFrame: null,
+  process: {
+    mode: "demo",
+    scenarioId: "invoice_from_email",
+    currentStep: 0,
+    previousStep: 0,
+    playing: false,
+    speed: 1,
+    timer: null,
+  },
 };
 
 const PROJECT_SECTIONS = [
@@ -80,6 +101,91 @@ const PROJECT_SECTIONS = [
   "roadmap_and_tasks",
   "docs",
   "export_and_commit",
+];
+
+const PROCESS_SCENARIOS = [
+  {
+    id: "invoice_from_email",
+    name: "Invoice received by email",
+    trigger: "email_received",
+    token: { label: "Email", compact: "Mail" },
+    event: {
+      event_id: "evt_demo_invoice_001",
+      event_type: "invoice_received",
+      source: "mail_manager",
+      target: "economic_manager",
+      created_at: "2026-08-23T10:31:00Z",
+      status: "processing",
+      payload: {
+        supplier: "Electric Company",
+        amount: "438 NIS",
+        due_date: "2026-08-30",
+        document_type: "Invoice for payment",
+      },
+      scenario_id: "invoice_from_email",
+      current_step: 0,
+    },
+    steps: [
+      {
+        id: "receive_email",
+        node: "mail_manager",
+        label: "Email received",
+        tokenLabel: "Mail",
+        explanation: "Mail Manager receives an invoice email and opens a processing event.",
+        findings: ["Source: incoming email", "Attachment: invoice PDF", "Status: processing"],
+      },
+      {
+        id: "extract_financial_data",
+        node: "mail_manager",
+        label: "Extract",
+        tokenLabel: "Invoice",
+        explanation: "Mail Manager extracts the supplier, amount, due date, and invoice type.",
+        findings: ["Supplier: Electric Company", "Amount: 438 NIS", "Due date: 2026-08-30", "Type: invoice for payment"],
+      },
+      {
+        id: "route_to_compass",
+        node: "compass",
+        label: "Route",
+        tokenLabel: "Event",
+        explanation: "Compass receives a FinancialEvent and chooses Economic Manager as the relevant agent.",
+        findings: ["Actor: Compass", "Intent: financial obligation", "Target: Economic Manager"],
+      },
+      {
+        id: "economic_process",
+        node: "economic_manager",
+        label: "Financial event",
+        tokenLabel: "FinancialEvent",
+        explanation: "Economic Manager classifies the event, validates the extracted data, and creates an obligation.",
+        findings: ["Class: utility bill", "Obligation: created", "Payment due: 2026-08-30"],
+        internalProcess: ["Receive", "Classify", "Validate", "Create obligation", "Store result"],
+      },
+      {
+        id: "rules_eval",
+        node: "rules_engine",
+        label: "Rules",
+        tokenLabel: "RuleCheck",
+        explanation: "Rules Engine evaluates whether the obligation needs a reminder or task.",
+        findings: ["Rule: due-date reminder", "Status: completed", "Decision: create task"],
+      },
+      {
+        id: "task_created",
+        node: "compass",
+        label: "Task created",
+        tokenLabel: "Task",
+        explanation: "Compass records the result and exposes the current state to the user.",
+        findings: ["Task: created", "Notification: pending", "Scenario: completed"],
+      },
+    ],
+    currentState: [
+      "Invoice: processed",
+      "Financial Event: created",
+      "Obligation: active",
+      "Due Date: 2026-08-30",
+      "Rule: evaluated",
+      "Task: created",
+      "Notification: pending",
+    ],
+  },
 ];
 
 function clone(value) {
@@ -422,6 +528,177 @@ function renderGraphFlowSummary(links = []) {
       if (edgeId) openEdgeDrawer(edgeId);
     });
   });
+}
+
+function getActiveScenario() {
+  return PROCESS_SCENARIOS.find((scenario) => scenario.id === state.process.scenarioId) || PROCESS_SCENARIOS[0];
+}
+
+function clampProcessStep(step) {
+  const scenario = getActiveScenario();
+  return Math.max(0, Math.min(scenario.steps.length - 1, step));
+}
+
+function setProcessStep(step, { keepPlaying = state.process.playing } = {}) {
+  state.process.previousStep = state.process.currentStep;
+  state.process.currentStep = clampProcessStep(step);
+  state.process.playing = keepPlaying && state.process.currentStep < getActiveScenario().steps.length - 1;
+  renderProcessVisualization();
+  renderNetworkGraph();
+  restartProcessTimer();
+}
+
+function setProcessPlaying(playing) {
+  state.process.playing = Boolean(playing) && state.process.currentStep < getActiveScenario().steps.length - 1;
+  renderProcessVisualization();
+  restartProcessTimer();
+}
+
+function restartProcessTimer() {
+  if (state.process.timer) {
+    clearInterval(state.process.timer);
+    state.process.timer = null;
+  }
+  if (!state.process.playing) return;
+  const delay = Math.max(450, 1800 / Math.max(0.5, state.process.speed || 1));
+  state.process.timer = setInterval(() => {
+    if (state.process.currentStep >= getActiveScenario().steps.length - 1) {
+      setProcessPlaying(false);
+      return;
+    }
+    setProcessStep(state.process.currentStep + 1, { keepPlaying: true });
+  }, delay);
+}
+
+function renderScenarioSelector() {
+  if (!el.scenarioSelect) return;
+  el.scenarioSelect.innerHTML = PROCESS_SCENARIOS.map((scenario) => (
+    `<option value="${escapeHtml(scenario.id)}"${scenario.id === state.process.scenarioId ? " selected" : ""}>${escapeHtml(scenario.name)}</option>`
+  )).join("");
+}
+
+function renderProcessVisualization() {
+  const scenario = getActiveScenario();
+  const stepIndex = clampProcessStep(state.process.currentStep);
+  const step = scenario.steps[stepIndex];
+  const event = { ...scenario.event, current_step: stepIndex, status: stepIndex === scenario.steps.length - 1 ? "completed" : "processing" };
+
+  renderScenarioSelector();
+  if (el.demoModeButton && el.liveModeButton) {
+    el.demoModeButton.classList.toggle("active", state.process.mode === "demo");
+    el.liveModeButton.classList.toggle("active", state.process.mode === "live");
+  }
+  if (el.playPauseButton) el.playPauseButton.textContent = state.process.playing ? "Pause" : "Play";
+  if (el.previousStepButton) el.previousStepButton.disabled = stepIndex <= 0;
+  if (el.nextStepButton) el.nextStepButton.disabled = stepIndex >= scenario.steps.length - 1;
+
+  if (el.processBar) {
+    el.processBar.innerHTML = scenario.steps.map((item, index) => {
+      const stateClass = index < stepIndex ? "completed" : index === stepIndex ? "active" : "pending";
+      return `
+        <button class="process-step ${stateClass}" data-step-index="${index}" type="button">
+          <span class="process-step__dot">${index + 1}</span>
+          <span class="process-step__label">${escapeHtml(item.label)}</span>
+        </button>
+      `;
+    }).join("");
+    el.processBar.querySelectorAll(".process-step").forEach((button) => {
+      button.addEventListener("click", () => setProcessStep(Number(button.dataset.stepIndex), { keepPlaying: false }));
+    });
+  }
+
+  if (el.stepExplanation) {
+    const internal = step.internalProcess || [];
+    const currentState = scenario.currentState || [];
+    const done = stepIndex === scenario.steps.length - 1;
+    const internalChips = internal.length
+      ? internal.map((item, index) => `<span class="process-chip${index <= Math.min(internal.length - 1, 2) ? " active" : ""}">${escapeHtml(item)}</span>`).join("")
+      : '<span class="process-chip process-chip--empty">No internal process</span>';
+    const stateChips = currentState.length
+      ? currentState.map((item, index) => `<span class="process-state${done || index <= stepIndex ? " visible" : ""}">${escapeHtml(item)}</span>`).join("")
+      : '<span class="process-state process-state--empty">No current state</span>';
+    el.stepExplanation.innerHTML = `
+      <div class="step-explanation__meta">Step ${stepIndex + 1} of ${scenario.steps.length} · Trigger: ${escapeHtml(scenario.trigger)}</div>
+      <h3>${escapeHtml(step.label)}</h3>
+      <p>${escapeHtml(step.explanation)}</p>
+      <div class="process-continuation">
+        <div class="process-continuation__row">
+          <span class="process-continuation__label">Internal process</span>
+          <div class="process-continuation__chips">${internalChips}</div>
+        </div>
+        <div class="process-continuation__row">
+          <span class="process-continuation__label">Current state</span>
+          <div class="process-continuation__chips">${stateChips}</div>
+        </div>
+      </div>
+      <dl>
+        <dt>Event</dt><dd>${escapeHtml(event.event_id)} · ${escapeHtml(event.event_type)} · ${escapeHtml(event.status)}</dd>
+        ${step.findings.map((finding) => `<dt>Detail</dt><dd>${escapeHtml(finding)}</dd>`).join("")}
+      </dl>
+    `;
+  }
+
+  if (el.internalProcessView) {
+    const internal = step.internalProcess || [];
+    el.internalProcessView.innerHTML = internal.length ? `
+      <div class="internal-process-view__title">Economic Manager internal process</div>
+      <div class="internal-process-chain">
+        ${internal.map((item, index) => `<span class="${index <= Math.min(internal.length - 1, 2) ? "active" : ""}">${escapeHtml(item)}</span>`).join("")}
+      </div>
+    ` : `
+      <div class="internal-process-view__title">Internal process</div>
+      <div class="internal-process-view__empty">No project drill-down for this step.</div>
+    `;
+  }
+
+  if (el.currentStateSummary) {
+    const done = stepIndex === scenario.steps.length - 1;
+    el.currentStateSummary.innerHTML = `
+      <div class="current-state-summary__title">${done ? "Scenario completed" : "Current state"}</div>
+      <ul>${scenario.currentState.map((item, index) => `<li class="${done || index <= stepIndex ? "visible" : ""}">${escapeHtml(item)}</li>`).join("")}</ul>
+    `;
+  }
+}
+
+function renderProcessOverlay(layer, positionMap) {
+  const scenario = getActiveScenario();
+  const stepIndex = clampProcessStep(state.process.currentStep);
+  const step = scenario.steps[stepIndex];
+  const previous = scenario.steps[clampProcessStep(state.process.previousStep)];
+  const currentPosition = positionMap.get(step.node);
+  const previousPosition = positionMap.get(previous.node) || currentPosition;
+  if (!currentPosition) return;
+
+  const processLayer = layer.append("g").attr("class", "process-overlay");
+  const activeNodes = new Set([step.node, previous.node]);
+  processLayer
+    .selectAll("circle.process-node-pulse")
+    .data([...activeNodes].map((id) => ({ id, position: positionMap.get(id) })).filter((item) => item.position))
+    .join("circle")
+    .attr("class", (d) => `process-node-pulse${d.id === step.node ? " active" : ""}`)
+    .attr("cx", (d) => d.position.x)
+    .attr("cy", (d) => d.position.y)
+    .attr("r", (d) => (d.id === step.node ? 42 : 30));
+
+  if (previousPosition && previous.node !== step.node) {
+    processLayer
+      .append("line")
+      .attr("class", "process-travel-line")
+      .attr("x1", previousPosition.x)
+      .attr("y1", previousPosition.y)
+      .attr("x2", currentPosition.x)
+      .attr("y2", currentPosition.y);
+  }
+
+  const token = processLayer.append("g").attr("class", "process-token");
+  token.attr("transform", `translate(${previousPosition?.x ?? currentPosition.x},${previousPosition?.y ?? currentPosition.y})`);
+  token.append("circle").attr("r", 18);
+  token.append("text").attr("dy", 4).text(step.tokenLabel || scenario.token.compact || "Event");
+  token
+    .transition()
+    .duration(Math.max(350, 950 / Math.max(0.5, state.process.speed || 1)))
+    .ease(d3.easeCubicOut)
+    .attr("transform", `translate(${currentPosition.x},${currentPosition.y})`);
 }
 
 function getProjectNodeRef(project) {
@@ -2059,6 +2336,7 @@ function renderNetworkGraph() {
       hideTooltip(el.tooltip);
     });
 
+  renderProcessOverlay(layer, positionMap);
   applyHierarchyHighlight(nodeSelection, hierarchyLinkSelection, flowLinkSelection, hierarchyNodes.find((node) => hierarchyNodeKey(node) === state.selectedNodeId) || null, state.selectedNodeId, state.selectedEdgeId);
 
   const graphBoundsWidth = Math.max(1, bounds.maxX - bounds.minX);
@@ -2332,6 +2610,7 @@ function render() {
   if (!state.server) return;
   updateServerHealth();
   renderTopbar();
+  renderProcessVisualization();
   renderNetworkGraph();
   if (state.draft) {
     renderDrawer();
@@ -2422,6 +2701,31 @@ function wireGlobalActions() {
   wireSplitLayoutActions();
   el.refreshButton.addEventListener("click", async () => {
     await bootstrap(true);
+  });
+  el.scenarioSelect?.addEventListener("change", (event) => {
+    state.process.scenarioId = event.target.value;
+    state.process.previousStep = 0;
+    state.process.currentStep = 0;
+    state.process.playing = false;
+    renderProcessVisualization();
+    renderNetworkGraph();
+    restartProcessTimer();
+  });
+  el.demoModeButton?.addEventListener("click", () => {
+    state.process.mode = "demo";
+    renderProcessVisualization();
+  });
+  el.liveModeButton?.addEventListener("click", () => {
+    state.process.mode = "live";
+    renderProcessVisualization();
+  });
+  el.restartScenarioButton?.addEventListener("click", () => setProcessStep(0, { keepPlaying: false }));
+  el.previousStepButton?.addEventListener("click", () => setProcessStep(state.process.currentStep - 1, { keepPlaying: false }));
+  el.nextStepButton?.addEventListener("click", () => setProcessStep(state.process.currentStep + 1, { keepPlaying: false }));
+  el.playPauseButton?.addEventListener("click", () => setProcessPlaying(!state.process.playing));
+  el.scenarioSpeedSelect?.addEventListener("change", (event) => {
+    state.process.speed = Number(event.target.value) || 1;
+    restartProcessTimer();
   });
   el.addProjectButton.addEventListener("click", () => openNewProjectDrawer());
   el.closeDrawerButton.addEventListener("click", () => closeDrawer());

@@ -36,6 +36,35 @@
         <div class="meta-strip__tasks" id="metaTaskBar"></div>
       </section>
 
+      <section class="process-visualization" aria-label="Process visualization">
+        <div class="process-controls">
+          <label for="scenarioSelect">What do you want to see?</label>
+          <select id="scenarioSelect" aria-label="Scenario"></select>
+          <div class="mode-toggle" role="group" aria-label="Visualization mode">
+            <button id="demoModeButton" class="mode-button active" type="button">Demo</button>
+            <button id="liveModeButton" class="mode-button" type="button">Live</button>
+          </div>
+          <div class="process-buttons" role="group" aria-label="Scenario controls">
+            <button id="restartScenarioButton" class="icon-button" type="button" title="Restart" aria-label="Restart">↺</button>
+            <button id="previousStepButton" class="icon-button" type="button" title="Previous step" aria-label="Previous step">⏮</button>
+            <button id="playPauseButton" class="primary process-play" type="button">Play</button>
+            <button id="nextStepButton" class="icon-button" type="button" title="Next step" aria-label="Next step">⏭</button>
+          </div>
+          <label class="speed-control" for="scenarioSpeedSelect">Speed</label>
+          <select id="scenarioSpeedSelect" aria-label="Scenario speed">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option>
+            <option value="2">2x</option>
+          </select>
+        </div>
+        <div id="processBar" class="process-bar"></div>
+        <div class="process-details">
+          <div id="stepExplanation" class="step-explanation"></div>
+          <div id="internalProcessView" class="internal-process-view"></div>
+          <div id="currentStateSummary" class="current-state-summary"></div>
+        </div>
+      </section>
+
       <main class="workspace">
         <section class="graph-panel graph-panel--compass">
           <div class="graph-panel__header">
