@@ -333,7 +333,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .tree-node.is-dimmed,
 .tree-link.is-dimmed,
 .flow-link.is-dimmed {
-  opacity: 0.28;
+  opacity: 1;
 }
 .tree-node.is-selected .tree-node__box {
   stroke: rgba(37, 99, 235, 0.95);

@@ -115,6 +115,23 @@
           ]
         },
         {
+          "node_id": "rules_engine",
+          "node_type": "project",
+          "label": "Rules Engine",
+          "project_ref": "rules_engine",
+          "status": "idle",
+          "position": {
+            "x": 520,
+            "y": 410,
+            "pinned": true
+          },
+          "tags": [
+            "policy",
+            "guardrails",
+            "non-finance"
+          ]
+        },
+        {
           "node_id": "administrative",
           "node_type": "project",
           "label": "Administrative",
@@ -189,6 +206,28 @@
           "last_success_at_utc": "2026-08-21T06:12:00Z"
         },
         {
+          "edge_id": "edge_compass_to_rules_engine",
+          "label": "Compass ↔ Rules",
+          "source_node": "compass",
+          "target_node": "rules_engine",
+          "channel_type": "direct_push",
+          "payload_format": "JSON",
+          "protocol": "internal",
+          "status": "healthy",
+          "last_success_at_utc": "2026-08-21T06:13:00Z"
+        },
+        {
+          "edge_id": "edge_rules_engine_to_assessment",
+          "label": "Rules → Assessment",
+          "source_node": "rules_engine",
+          "target_node": "assessment",
+          "channel_type": "direct_push",
+          "payload_format": "JSON",
+          "protocol": "internal",
+          "status": "healthy",
+          "last_success_at_utc": "2026-08-21T06:13:30Z"
+        },
+        {
           "edge_id": "edge_compass_to_admin",
           "label": "Compass ↔ Admin",
           "source_node": "compass",
@@ -246,7 +285,7 @@
     "health": {
       "status": "degraded",
       "checked_at_utc": "2026-08-21T11:20:00Z",
-      "active_projects": 6,
+      "active_projects": 8,
       "blocked_tasks": 1,
       "open_alerts": 1
     },

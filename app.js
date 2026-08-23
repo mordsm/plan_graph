@@ -272,6 +272,14 @@ function normalizeProject(project) {
   next.roadmap_and_tasks = next.roadmap_and_tasks.map(normalizeTask);
   return next;
 }
+function projectRosterSignature(server) {
+  return (server?.projects || [])
+    .map((project) => project?.identity_and_role?.project_id || "")
+    .filter(Boolean)
+    .sort()
+    .join("|");
+}
+
 
 function normalizeTask(task) {
   return {
@@ -1837,7 +1845,7 @@ function applyHierarchyHighlight(nodeSelection, linkSelection, flowSelection, fo
 
   nodeSelection
     .classed("is-selected", (d) => hierarchyNodeKey(d) === selectedNodeId)
-    .classed("is-dimmed", (d) => hasFocus && !focusIds.has(hierarchyNodeKey(d)));
+    .classed("is-dimmed", false);
 
   linkSelection
     .classed("is-selected", (d) => {
@@ -1845,11 +1853,11 @@ function applyHierarchyHighlight(nodeSelection, linkSelection, flowSelection, fo
       const targetKey = hierarchyNodeKey(d.target);
       return sourceKey === selectedNodeId || targetKey === selectedNodeId || (focusNode && (focusIds.has(sourceKey) || focusIds.has(targetKey)));
     })
-    .classed("is-dimmed", (d) => hasFocus && !(focusIds.has(hierarchyNodeKey(d.source)) || focusIds.has(hierarchyNodeKey(d.target))));
+    .classed("is-dimmed", false);
 
   flowSelection
     .classed("is-selected", (d) => d.data.edge_id === selectedEdgeId || (focusNode && (focusProjectRefs.has(d.data.source_node) || focusProjectRefs.has(d.data.target_node))))
-    .classed("is-dimmed", (d) => hasFocus && !(focusProjectRefs.has(d.data.source_node) || focusProjectRefs.has(d.data.target_node)));
+    .classed("is-dimmed", false);
 }
 
 function renderNetworkGraph() {
@@ -2055,10 +2063,10 @@ function renderNetworkGraph() {
 
   const graphBoundsWidth = Math.max(1, bounds.maxX - bounds.minX);
   const graphBoundsHeight = Math.max(1, bounds.maxY - bounds.minY);
-  const fitScale = Math.min(width / (graphBoundsWidth + 150), height / (graphBoundsHeight + 110));
+  const fitScale = Math.min(width / (graphBoundsWidth + 180), height / (graphBoundsHeight + 140));
   const finalScale = Math.max(0.9, Math.min(3, fitScale * 1.08));
   const finalX = width / 2 - ((bounds.minX + bounds.maxX) / 2) * finalScale;
-  const finalY = height / 2 - ((bounds.minY + bounds.maxY) / 2) * finalScale - 10;
+  const finalY = height * 0.58 - ((bounds.minY + bounds.maxY) / 2) * finalScale;
   const transform = d3.zoomIdentity.translate(finalX, finalY).scale(finalScale);
   state.currentGraphTransform = transform;
   svg.call(zoom.transform, transform);
@@ -2083,6 +2091,7 @@ function compassPosition(node, index, width, height) {
     economic_manager: (235 * Math.PI) / 180,
     self_manager: (325 * Math.PI) / 180,
     assessment: (20 * Math.PI) / 180,
+    rules_engine: (45 * Math.PI) / 180,
     administrative: (110 * Math.PI) / 180,
   };
   const manualRadiusScale = {
@@ -2091,6 +2100,7 @@ function compassPosition(node, index, width, height) {
     economic_manager: 1.0,
     self_manager: 0.98,
     assessment: 0.96,
+    rules_engine: 0.98,
     administrative: 0.98,
   };
 
@@ -2161,6 +2171,7 @@ function renderCompassGraph() {
     { id: "economic_manager", label: "Economic Manager", angle: (235 * Math.PI) / 180, r: maxRadius * 1.02 },
     { id: "self_manager", label: "Self Manager", angle: (325 * Math.PI) / 180, r: maxRadius * 1.02 },
     { id: "assessment", label: "Assessment", angle: (20 * Math.PI) / 180, r: maxRadius * 1.02 },
+    { id: "rules_engine", label: "Rules Engine", angle: (45 * Math.PI) / 180, r: maxRadius * 1.02 },
     { id: "administrative", label: "Administrative", angle: (110 * Math.PI) / 180, r: maxRadius * 1.02 },
   ];
   const financeSummary = compassParts
@@ -2207,8 +2218,7 @@ function renderCompassGraph() {
   edgeGroup
     .append("line")
     .attr("class", "link-line")
-    .attr("stroke-dasharray", "4 4")
-    .attr("marker-end", "url(#compass-arrowhead)");
+    .attr("stroke-dasharray", "4 4");
   edgeGroup
     .append("line")
     .attr("class", "link-hit")
@@ -2568,7 +2578,10 @@ async function bootstrap(forceReload = false) {
     if (stored && stored.state && stored.schema_version) {
       const normalizedStored = normalizeState(stored);
       const storedErrors = validateState(normalizedStored);
-      if (storedErrors.length) {
+      const sourceRoster = projectRosterSignature(normalized);
+      const storedRoster = projectRosterSignature(normalizedStored);
+      const rosterMatches = sourceRoster === storedRoster;
+      if (storedErrors.length || !rosterMatches) {
         state.server = normalized;
         saveJsonToStorage(state.storageKey, state.server);
       } else {
