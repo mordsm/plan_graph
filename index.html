@@ -16,26 +16,26 @@
           <p id="appSubtitle">Schema-driven D3 canvas and multi-section project drawer.</p>
         </div>
         <div class="topbar__center" id="healthCluster"></div>
-      <div class="topbar__process" aria-label="Scenario controls">
-        <label for="scenarioSelect">Scenario</label>
-        <select id="scenarioSelect" aria-label="Scenario"></select>
-        <div class="mode-toggle" role="group" aria-label="Visualization mode">
-          <button id="demoModeButton" class="mode-button active" type="button">Demo</button>
-          <button id="liveModeButton" class="mode-button" type="button">Live</button>
+        <div class="topbar__process" aria-label="Scenario controls">
+          <label for="scenarioSelect">Scenario</label>
+          <select id="scenarioSelect" aria-label="Scenario"></select>
+          <div class="mode-toggle" role="group" aria-label="Visualization mode">
+            <button id="demoModeButton" class="mode-button active" type="button">Demo</button>
+            <button id="liveModeButton" class="mode-button" type="button">Live</button>
+          </div>
+          <div class="process-buttons" role="group" aria-label="Scenario controls">
+            <button id="restartScenarioButton" class="icon-button" type="button" title="Restart" aria-label="Restart">↺</button>
+            <button id="previousStepButton" class="icon-button" type="button" title="Previous step" aria-label="Previous step">⏮</button>
+            <button id="playPauseButton" class="primary process-play" type="button">Play</button>
+            <button id="nextStepButton" class="icon-button" type="button" title="Next step" aria-label="Next step">⏭</button>
+          </div>
+          <label class="speed-control" for="scenarioSpeedSelect">Speed</label>
+          <select id="scenarioSpeedSelect" aria-label="Scenario speed">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option>
+            <option value="2">2x</option>
+          </select>
         </div>
-        <div class="process-buttons" role="group" aria-label="Scenario controls">
-          <button id="restartScenarioButton" class="icon-button" type="button" title="Restart" aria-label="Restart">↺</button>
-          <button id="previousStepButton" class="icon-button" type="button" title="Previous step" aria-label="Previous step">⏮</button>
-          <button id="playPauseButton" class="primary process-play" type="button">Play</button>
-          <button id="nextStepButton" class="icon-button" type="button" title="Next step" aria-label="Next step">⏭</button>
-        </div>
-        <label class="speed-control" for="scenarioSpeedSelect">Speed</label>
-        <select id="scenarioSpeedSelect" aria-label="Scenario speed">
-          <option value="0.5">0.5x</option>
-          <option value="1" selected>1x</option>
-          <option value="2">2x</option>
-        </select>
-      </div>
         <div class="topbar__right">
           <div class="set-switcher">
             <label for="setSelect">Set</label>
@@ -46,15 +46,6 @@
         </div>
       </header>
 
-      <section class="meta-strip">
-        <div class="meta-strip__stats">
-          <div class="stat"><span class="stat__label">Revision</span><strong id="revisionStat">—</strong></div>
-          <div class="stat"><span class="stat__label">Health</span><strong id="healthStat">—</strong></div>
-          <div class="stat"><span class="stat__label">Alerts</span><strong id="alertsStat">—</strong></div>
-          <div class="stat"><span class="stat__label">Blocked</span><strong id="blockedStat">—</strong></div>
-        </div>
-        <div class="meta-strip__tasks" id="metaTaskBar"></div>
-      </section>
 
       <section class="process-visualization" aria-label="Process continuation">
         <div id="stepExplanation" class="step-explanation"></div>
@@ -79,7 +70,7 @@
 
       <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" aria-label="Resize graph and drawer" tabindex="0"></div>
 
-      <aside id="drawer" class="drawer open drawer--persistent" aria-hidden="false">
+      <aside id="drawer" class="drawer" aria-hidden="true">
         <div class="drawer__shell">
           <div class="drawer__head">
             <div>

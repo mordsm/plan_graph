@@ -11,8 +11,9 @@ const APP_DEFAULTS = {
 const el = {
   appTitle: document.getElementById("appTitle"),
   appSubtitle: document.getElementById("appSubtitle"),
+  appShell: document.getElementById("appShell"),
   healthCluster: document.getElementById("healthCluster"),
-  revisionStat: document.getElementById("revisionStat"),
+
   healthStat: document.getElementById("healthStat"),
   alertsStat: document.getElementById("alertsStat"),
   blockedStat: document.getElementById("blockedStat"),
@@ -105,87 +106,709 @@ const PROJECT_SECTIONS = [
 
 const PROCESS_SCENARIOS = [
   {
-    id: "invoice_from_email",
-    name: "Invoice received by email",
-    trigger: "email_received",
-    token: { label: "Email", compact: "Mail" },
-    event: {
-      event_id: "evt_demo_invoice_001",
-      event_type: "invoice_received",
-      source: "mail_manager",
-      target: "economic_manager",
-      created_at: "2026-08-23T10:31:00Z",
-      status: "processing",
-      payload: {
-        supplier: "Electric Company",
-        amount: "438 NIS",
-        due_date: "2026-08-30",
-        document_type: "Invoice for payment",
-      },
-      scenario_id: "invoice_from_email",
-      current_step: 0,
+    "id": "invoice_from_email",
+    "name": "Invoice received by email / חשבונית התקבלה במייל",
+    "trigger": "email_received",
+    "token": {
+      "label": "Email",
+      "compact": "Mail",
+      "glyph": "📧"
     },
-    steps: [
+    "event": {
+      "event_id": "evt_demo_invoice_001",
+      "event_type": "invoice_received",
+      "source": "mail_manager",
+      "target": "economic_manager",
+      "created_at": "2026-08-23T10:31:00Z",
+      "status": "processing",
+      "payload": {
+        "supplier": "Electric Company",
+        "amount": "438 NIS",
+        "due_date": "2026-08-30",
+        "document_type": "Invoice for payment"
+      },
+      "scenario_id": "invoice_from_email",
+      "current_step": 0
+    },
+    "steps": [
       {
-        id: "receive_email",
-        node: "mail_manager",
-        label: "Email received",
-        tokenLabel: "Mail",
-        explanation: "Mail Manager receives an invoice email and opens a processing event.",
-        findings: ["Source: incoming email", "Attachment: invoice PDF", "Status: processing"],
+        "id": "receive_email",
+        "node": "mail_manager",
+        "label": "Email received",
+        "tokenLabel": "Mail",
+        "tokenGlyph": "📧",
+        "explanation": "Mail Manager receives an invoice email and opens a processing event.",
+        "findings": [
+          "Source: incoming email",
+          "Attachment: invoice PDF",
+          "Status: processing"
+        ]
       },
       {
-        id: "extract_financial_data",
-        node: "mail_manager",
-        label: "Extract",
-        tokenLabel: "Invoice",
-        explanation: "Mail Manager extracts the supplier, amount, due date, and invoice type.",
-        findings: ["Supplier: Electric Company", "Amount: 438 NIS", "Due date: 2026-08-30", "Type: invoice for payment"],
+        "id": "extract_financial_data",
+        "node": "mail_manager",
+        "label": "Extract",
+        "tokenLabel": "Invoice",
+        "tokenGlyph": "📄",
+        "explanation": "Mail Manager extracts the supplier, amount, due date, and invoice type.",
+        "findings": [
+          "Supplier: Electric Company",
+          "Amount: 438 NIS",
+          "Due date: 2026-08-30",
+          "Type: invoice for payment"
+        ]
       },
       {
-        id: "route_to_compass",
-        node: "compass",
-        label: "Route",
-        tokenLabel: "Event",
-        explanation: "Compass receives a FinancialEvent and chooses Economic Manager as the relevant agent.",
-        findings: ["Actor: Compass", "Intent: financial obligation", "Target: Economic Manager"],
+        "id": "route_to_compass",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass receives a FinancialEvent and chooses Economic Manager as the relevant agent.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: financial obligation",
+          "Target: Economic Manager"
+        ]
       },
       {
-        id: "economic_process",
-        node: "economic_manager",
-        label: "Financial event",
-        tokenLabel: "FinancialEvent",
-        explanation: "Economic Manager classifies the event, validates the extracted data, and creates an obligation.",
-        findings: ["Class: utility bill", "Obligation: created", "Payment due: 2026-08-30"],
-        internalProcess: ["Receive", "Classify", "Validate", "Create obligation", "Store result"],
+        "id": "economic_process",
+        "node": "economic_manager",
+        "label": "Financial event",
+        "tokenLabel": "FinancialEvent",
+        "tokenGlyph": "₪",
+        "explanation": "Economic Manager classifies the event, validates the extracted data, and creates an obligation.",
+        "findings": [
+          "Class: utility bill",
+          "Obligation: created",
+          "Payment due: 2026-08-30"
+        ],
+        "internalProcess": [
+          "Receive",
+          "Classify",
+          "Validate",
+          "Create obligation",
+          "Store result"
+        ]
       },
       {
-        id: "rules_eval",
-        node: "rules_engine",
-        label: "Rules",
-        tokenLabel: "RuleCheck",
-        explanation: "Rules Engine evaluates whether the obligation needs a reminder or task.",
-        findings: ["Rule: due-date reminder", "Status: completed", "Decision: create task"],
+        "id": "rules_eval",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine evaluates whether the obligation needs a reminder or task.",
+        "findings": [
+          "Rule: due-date reminder",
+          "Status: completed",
+          "Decision: create task"
+        ]
       },
       {
-        id: "task_created",
-        node: "compass",
-        label: "Task created",
-        tokenLabel: "Task",
-        explanation: "Compass records the result and exposes the current state to the user.",
-        findings: ["Task: created", "Notification: pending", "Scenario: completed"],
-      },
+        "id": "task_created",
+        "node": "compass",
+        "label": "Task created",
+        "tokenLabel": "Task",
+        "tokenGlyph": "✓",
+        "explanation": "Compass records the result and exposes the current state to the user.",
+        "findings": [
+          "Task: created",
+          "Notification: pending",
+          "Scenario: completed"
+        ]
+      }
     ],
-    currentState: [
+    "currentState": [
       "Invoice: processed",
       "Financial Event: created",
       "Obligation: active",
       "Due Date: 2026-08-30",
       "Rule: evaluated",
       "Task: created",
-      "Notification: pending",
-    ],
+      "Notification: pending"
+    ]
   },
+  {
+    "id": "payment_due_reminder",
+    "name": "Payment due / מועד תשלום",
+    "trigger": "payment_due",
+    "token": {
+      "label": "Reminder",
+      "compact": "Due",
+      "glyph": "⏰"
+    },
+    "event": {
+      "event_id": "evt_demo_due_001",
+      "event_type": "payment_due",
+      "source": "scheduler",
+      "target": "compass",
+      "created_at": "2026-08-23T10:40:00Z",
+      "status": "processing",
+      "payload": {
+        "obligation_id": "obl_129",
+        "due_date": "2026-08-30",
+        "status": "due"
+      },
+      "scenario_id": "payment_due_reminder",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "trigger_due",
+        "node": "compass",
+        "label": "Trigger",
+        "tokenLabel": "Due",
+        "tokenGlyph": "⏰",
+        "explanation": "A scheduled trigger marks an obligation as due and asks Compass to orchestrate the response.",
+        "findings": [
+          "Trigger: scheduled review",
+          "Obligation: due",
+          "Target: Compass"
+        ]
+      },
+      {
+        "id": "route_to_economic",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass routes the due event to Economic Manager for obligation inspection.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: payment follow-up",
+          "Target: Economic Manager"
+        ]
+      },
+      {
+        "id": "inspect_obligation",
+        "node": "economic_manager",
+        "label": "Inspect",
+        "tokenLabel": "Obligation",
+        "tokenGlyph": "₪",
+        "explanation": "Economic Manager checks the obligation and determines whether it is already paid.",
+        "findings": [
+          "Obligation: active",
+          "Paid: no",
+          "Due date: 2026-08-30"
+        ],
+        "internalProcess": [
+          "Receive",
+          "Identify obligation",
+          "Check payment status",
+          "Set follow-up"
+        ]
+      },
+      {
+        "id": "rules_reminder",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "Alert",
+        "tokenGlyph": "!",
+        "explanation": "Rules Engine decides whether to send a reminder, task, or alert.",
+        "findings": [
+          "Rule: reminder enabled",
+          "Action: create task",
+          "Status: completed"
+        ]
+      },
+      {
+        "id": "task_or_alert",
+        "node": "compass",
+        "label": "Result",
+        "tokenLabel": "Task",
+        "tokenGlyph": "✓",
+        "explanation": "Compass publishes the result and updates the current financial state.",
+        "findings": [
+          "Task: created",
+          "Alert: pending",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Obligation: active",
+      "Due date: 2026-08-30",
+      "Payment status: pending",
+      "Rule: evaluated",
+      "Task: created",
+      "Alert: pending"
+    ]
+  },
+  {
+    "id": "bank_transaction_detected",
+    "name": "Bank transaction detected / תנועה חדשה בבנק",
+    "trigger": "bank_transaction_detected",
+    "token": {
+      "label": "Bank",
+      "compact": "Txn",
+      "glyph": "🏦"
+    },
+    "event": {
+      "event_id": "evt_demo_bank_001",
+      "event_type": "bank_transaction_detected",
+      "source": "bank_connector",
+      "target": "compass",
+      "created_at": "2026-08-23T11:05:00Z",
+      "status": "processing",
+      "payload": {
+        "amount": "-128 NIS",
+        "description": "Phone bill",
+        "account": "Main"
+      },
+      "scenario_id": "bank_transaction_detected",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "detect_transaction",
+        "node": "bank_connector",
+        "label": "Transaction",
+        "tokenLabel": "Txn",
+        "tokenGlyph": "🏦",
+        "explanation": "A connector detects a new bank transaction and sends it into Compass.",
+        "findings": [
+          "Source: bank connector",
+          "Amount: -128 NIS",
+          "Status: new"
+        ]
+      },
+      {
+        "id": "route_transaction",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass routes the transaction to Economic Manager for classification.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: transaction classification",
+          "Target: Economic Manager"
+        ]
+      },
+      {
+        "id": "classify_transaction",
+        "node": "economic_manager",
+        "label": "Classify",
+        "tokenLabel": "FinancialEvent",
+        "tokenGlyph": "₪",
+        "explanation": "Economic Manager classifies the transaction and matches it to existing obligations.",
+        "findings": [
+          "Class: utility expense",
+          "Match: phone bill",
+          "State: updated"
+        ],
+        "internalProcess": [
+          "Receive",
+          "Classify transaction",
+          "Match obligation",
+          "Update financial state"
+        ]
+      },
+      {
+        "id": "rules_update",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine checks whether the transaction changes alerts or follow-up tasks.",
+        "findings": [
+          "Rule: match found",
+          "Alert: none",
+          "Status: completed"
+        ]
+      },
+      {
+        "id": "store_state",
+        "node": "compass",
+        "label": "Stored",
+        "tokenLabel": "State",
+        "tokenGlyph": "✓",
+        "explanation": "Compass stores the updated state for later replay and summaries.",
+        "findings": [
+          "Stored: yes",
+          "Replay: available",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Transaction: classified",
+      "Obligation: matched",
+      "Financial state: updated",
+      "Rule: evaluated",
+      "Alert: none"
+    ]
+  },
+  {
+    "id": "unusual_expense_detected",
+    "name": "Unusual expense / הוצאה חריגה",
+    "trigger": "transaction",
+    "token": {
+      "label": "Alert",
+      "compact": "Warn",
+      "glyph": "!"
+    },
+    "event": {
+      "event_id": "evt_demo_anomaly_001",
+      "event_type": "unusual_expense_detected",
+      "source": "economic_manager",
+      "target": "compass",
+      "created_at": "2026-08-23T11:12:00Z",
+      "status": "processing",
+      "payload": {
+        "amount": "892 NIS",
+        "merchant": "Luxury Store",
+        "category": "unexpected"
+      },
+      "scenario_id": "unusual_expense_detected",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "receive_transaction",
+        "node": "economic_manager",
+        "label": "Transaction",
+        "tokenLabel": "Txn",
+        "tokenGlyph": "🏦",
+        "explanation": "Economic Manager receives a transaction and compares it with history and rules.",
+        "findings": [
+          "Amount: 892 NIS",
+          "Merchant: Luxury Store",
+          "Compared to history"
+        ]
+      },
+      {
+        "id": "detect_anomaly",
+        "node": "economic_manager",
+        "label": "Detect anomaly",
+        "tokenLabel": "Alert",
+        "tokenGlyph": "!",
+        "explanation": "The transaction looks unusual, so Economic Manager marks it as a possible anomaly.",
+        "findings": [
+          "Pattern: outlier",
+          "Risk: elevated",
+          "Action: alert"
+        ]
+      },
+      {
+        "id": "rules_anomaly",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine confirms the anomaly and decides whether to notify the user.",
+        "findings": [
+          "Rule: anomaly threshold exceeded",
+          "Status: completed",
+          "Action: notify"
+        ]
+      },
+      {
+        "id": "notify_compass",
+        "node": "compass",
+        "label": "Notify",
+        "tokenLabel": "Alert",
+        "tokenGlyph": "!",
+        "explanation": "Compass forwards the alert to the user and stores the result.",
+        "findings": [
+          "User notification: queued",
+          "Alert: created",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Transaction: flagged",
+      "Anomaly: detected",
+      "Alert: created",
+      "User notification: pending"
+    ]
+  },
+  {
+    "id": "user_financial_question",
+    "name": "User question / בקשה כלכלית מהמשתמש",
+    "trigger": "user_request",
+    "token": {
+      "label": "Question",
+      "compact": "Ask",
+      "glyph": "❓"
+    },
+    "event": {
+      "event_id": "evt_demo_user_001",
+      "event_type": "financial_question",
+      "source": "user",
+      "target": "compass",
+      "created_at": "2026-08-23T11:20:00Z",
+      "status": "processing",
+      "payload": {
+        "query": "How much did I spend on insurance this month?"
+      },
+      "scenario_id": "user_financial_question",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "receive_question",
+        "node": "compass",
+        "label": "Question",
+        "tokenLabel": "Ask",
+        "tokenGlyph": "❓",
+        "explanation": "The user asks Compass a financial question.",
+        "findings": [
+          "Source: user",
+          "Intent: financial query",
+          "Target: Compass"
+        ]
+      },
+      {
+        "id": "route_to_economic",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Query",
+        "tokenGlyph": "↗",
+        "explanation": "Compass identifies the financial intent and routes it to Economic Manager.",
+        "findings": [
+          "Intent: insurance spend",
+          "Target: Economic Manager",
+          "Mode: query"
+        ]
+      },
+      {
+        "id": "aggregate_data",
+        "node": "economic_manager",
+        "label": "Aggregate",
+        "tokenLabel": "Data",
+        "tokenGlyph": "₪",
+        "explanation": "Economic Manager queries financial data and aggregates the answer.",
+        "findings": [
+          "Period: this month",
+          "Category: insurance",
+          "Aggregation: total"
+        ],
+        "internalProcess": [
+          "Receive",
+          "Identify intent",
+          "Query financial data",
+          "Aggregate",
+          "Return answer"
+        ]
+      },
+      {
+        "id": "answer_user",
+        "node": "compass",
+        "label": "Answer",
+        "tokenLabel": "Answer",
+        "tokenGlyph": "✓",
+        "explanation": "Compass returns the answer to the user.",
+        "findings": [
+          "Answer: calculated",
+          "Current state: unchanged",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Query: answered",
+      "Financial data: aggregated",
+      "Answer: ready"
+    ]
+  },
+  {
+    "id": "monthly_report",
+    "name": "Monthly report / דוח חודשי",
+    "trigger": "scheduled_review",
+    "token": {
+      "label": "Report",
+      "compact": "Rpt",
+      "glyph": "🗒"
+    },
+    "event": {
+      "event_id": "evt_demo_report_001",
+      "event_type": "scheduled_financial_review",
+      "source": "scheduler",
+      "target": "compass",
+      "created_at": "2026-08-23T06:00:00Z",
+      "status": "processing",
+      "payload": {
+        "period": "2026-08",
+        "scope": "monthly review"
+      },
+      "scenario_id": "monthly_report",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "scheduled_trigger",
+        "node": "compass",
+        "label": "Scheduled",
+        "tokenLabel": "Rpt",
+        "tokenGlyph": "🗒",
+        "explanation": "A scheduled review trigger asks Compass to prepare a monthly financial report.",
+        "findings": [
+          "Trigger: scheduled review",
+          "Period: monthly",
+          "Target: Compass"
+        ]
+      },
+      {
+        "id": "collect_data",
+        "node": "economic_manager",
+        "label": "Collect",
+        "tokenLabel": "Data",
+        "tokenGlyph": "₪",
+        "explanation": "Economic Manager collects income, expenses, and obligations for the period.",
+        "findings": [
+          "Income: collected",
+          "Expenses: collected",
+          "Obligations: collected"
+        ],
+        "internalProcess": [
+          "Receive",
+          "Collect period data",
+          "Calculate income",
+          "Calculate expenses",
+          "Calculate obligations",
+          "Build report"
+        ]
+      },
+      {
+        "id": "detect_anomalies",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine checks the collected data for anomalies and follow-up needs.",
+        "findings": [
+          "Rule: review threshold",
+          "Anomaly: checked",
+          "Status: completed"
+        ]
+      },
+      {
+        "id": "deliver_report",
+        "node": "compass",
+        "label": "Deliver",
+        "tokenLabel": "Report",
+        "tokenGlyph": "✓",
+        "explanation": "Compass delivers the report to the user.",
+        "findings": [
+          "Report: ready",
+          "User: notified",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Report: ready",
+      "Income: summarized",
+      "Expenses: summarized",
+      "Obligations: summarized",
+      "User notification: pending"
+    ]
+  },
+  {
+    "id": "manual_financial_entry",
+    "name": "Manual entry / הזנה פיננסית ידנית",
+    "trigger": "manual_entry",
+    "token": {
+      "label": "Entry",
+      "compact": "Edit",
+      "glyph": "✎"
+    },
+    "event": {
+      "event_id": "evt_demo_manual_001",
+      "event_type": "manual_financial_entry",
+      "source": "user",
+      "target": "economic_manager",
+      "created_at": "2026-08-23T12:00:00Z",
+      "status": "processing",
+      "payload": {
+        "kind": "expense",
+        "amount": "74 NIS",
+        "note": "Parking"
+      },
+      "scenario_id": "manual_financial_entry",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "enter_data",
+        "node": "compass",
+        "label": "Entry",
+        "tokenLabel": "Edit",
+        "tokenGlyph": "✎",
+        "explanation": "The user enters a financial item manually.",
+        "findings": [
+          "Source: user",
+          "Kind: expense",
+          "Status: draft"
+        ]
+      },
+      {
+        "id": "route_manual",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass routes the manual entry to Economic Manager.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: store financial item",
+          "Target: Economic Manager"
+        ]
+      },
+      {
+        "id": "store_entry",
+        "node": "economic_manager",
+        "label": "Store",
+        "tokenLabel": "FinancialEvent",
+        "tokenGlyph": "₪",
+        "explanation": "Economic Manager stores the entry as a financial event.",
+        "findings": [
+          "Stored: yes",
+          "Category: expense",
+          "State: updated"
+        ],
+        "internalProcess": [
+          "Receive",
+          "Classify",
+          "Store result"
+        ]
+      },
+      {
+        "id": "rules_check",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine checks whether the entry should create a follow-up task.",
+        "findings": [
+          "Rule: manual entry",
+          "Task: optional",
+          "Status: completed"
+        ]
+      },
+      {
+        "id": "finish",
+        "node": "compass",
+        "label": "Done",
+        "tokenLabel": "State",
+        "tokenGlyph": "✓",
+        "explanation": "Compass completes the workflow and updates the summary state.",
+        "findings": [
+          "Current state: updated",
+          "Replay: possible",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Entry: stored",
+      "Financial event: created",
+      "Rule: evaluated",
+      "Current state: updated"
+    ]
+  }
 ];
 
 function clone(value) {
@@ -668,7 +1291,7 @@ function renderProcessOverlay(layer, positionMap) {
   const token = processLayer.append("g").attr("class", "process-token");
   token.attr("transform", `translate(${previousPosition?.x ?? currentPosition.x},${previousPosition?.y ?? currentPosition.y})`);
   token.append("circle").attr("r", 18);
-  token.append("text").attr("dy", 4).text(step.tokenLabel || scenario.token.compact || "Event");
+  token.append("text").attr("dy", 4).text(step.tokenGlyph || scenario.token.glyph || step.tokenLabel || scenario.token.compact || "Event");
   token
     .transition()
     .duration(Math.max(350, 950 / Math.max(0.5, state.process.speed || 1)))
@@ -844,6 +1467,7 @@ function setSummary(text, kind = "") {
 
 function setDrawerOpen(open) {
   el.drawer.classList.toggle("open", open);
+  el.appShell?.classList.toggle("drawer-open", open);
   el.drawer.setAttribute("aria-hidden", String(!open));
 }
 
@@ -883,34 +1507,33 @@ function renderTopbar() {
 
   el.appTitle.textContent = state.config.app_title || APP_DEFAULTS.app_title;
   el.appSubtitle.textContent = `${state.server.schema_version} • ${state.server.state.ecosystem_id}${state.selectedSetLabel ? ` • ${state.selectedSetLabel}` : ""}`;
-  el.revisionStat.textContent = String(state.server.state.revision);
-  el.healthStat.textContent = getHealthDisplayLabel(health.status);
-  el.alertsStat.textContent = String(health.open_alerts ?? alerts.filter((a) => a.status === "open").length);
-  el.blockedStat.textContent = String(health.blocked_tasks ?? tasks.filter((t) => t.status === "blocked").length);
-
   el.healthCluster.innerHTML = `
+    <span class="stat"><span class="stat__label">Revision</span><strong>${escapeHtml(state.server.state.revision)}</strong></span>
     <span class="health-pill" data-health="${escapeHtml(health.status)}">Health: ${escapeHtml(getHealthDisplayLabel(health.status))}</span>
-    <span class="health-pill" data-health="unknown">Open alerts: ${escapeHtml(health.open_alerts ?? alerts.length)}</span>
+    <span class="health-pill" data-health="unknown">Alerts: ${escapeHtml(health.open_alerts ?? alerts.filter((a) => a.status === "open").length)}</span>
+    <span class="health-pill" data-health="unknown">Blocked: ${escapeHtml(health.blocked_tasks ?? tasks.filter((t) => t.status === "blocked").length)}</span>
   `;
 
-  el.metaTaskBar.innerHTML = tasks.length
-    ? tasks
-        .slice(0, 8)
-        .map((task) => `
-          <button class="task-chip" data-project-id="${escapeHtml(task.project_id)}">
-            <strong>${escapeHtml(task.priority)}</strong>
-            <span>${escapeHtml(task.title)}</span>
-          </button>
-        `)
-        .join("")
-    : `<span class="stat__label">No urgent or high-priority tasks.</span>`;
+  if (el.metaTaskBar) {
+    el.metaTaskBar.innerHTML = tasks.length
+      ? tasks
+          .slice(0, 8)
+          .map((task) => `
+            <button class="task-chip" data-project-id="${escapeHtml(task.project_id)}">
+              <strong>${escapeHtml(task.priority)}</strong>
+              <span>${escapeHtml(task.title)}</span>
+            </button>
+          `)
+          .join("")
+      : `<span class="stat__label">No urgent or high-priority tasks.</span>`;
 
-  el.metaTaskBar.querySelectorAll(".task-chip").forEach((button) => {
-    button.addEventListener("click", () => {
-      const projectId = button.dataset.projectId;
-      if (projectId) openProjectDrawer(projectId);
+    el.metaTaskBar.querySelectorAll(".task-chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        const projectId = button.dataset.projectId;
+        if (projectId) openProjectDrawer(projectId);
+      });
     });
-  });
+  }
 
   renderSetSwitcher();
 }
@@ -2882,9 +3505,6 @@ async function bootstrap(forceReload = false) {
 
   el.validationSummary.textContent = "";
   render();
-  if (!state.draft && state.server.projects.length) {
-    openProjectDrawer(state.server.projects[0].identity_and_role.project_id);
-  }
 }
 
 function normalizeConfig(raw) {

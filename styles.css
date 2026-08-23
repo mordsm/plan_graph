@@ -44,24 +44,55 @@ button { cursor: pointer; }
   height: 100%;
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--splitter-width) minmax(420px, var(--drawer-width));
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 0 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0;
+}
+.app-shell.drawer-open {
+  grid-template-columns: minmax(0, 1fr) var(--splitter-width) minmax(420px, var(--drawer-width));
 }
 
 .topbar,
-.meta-strip,
 .process-visualization {
   grid-column: 1 / -1;
 }
-
-.workspace {
-  grid-column: 1;
-  grid-row: 4;
-  min-height: 0;
-  padding: 8px 10px 10px;
+.topbar {
   display: flex;
-  height: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(10px);
+}
+.topbar__left,
+.topbar__center,
+.topbar__process,
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.topbar__left {
+  flex: 1 1 320px;
+  min-width: 240px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.topbar__center {
+  flex: 0 1 auto;
+}
+.topbar__process {
+  flex: 1 1 520px;
+  justify-content: center;
+}
+.topbar__right {
+  margin-left: auto;
+  justify-content: flex-end;
 }
 
 .process-visualization {
@@ -477,7 +508,8 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .task-chip strong { color: var(--warn); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
 
 .workspace {
-  height: calc(100% - var(--topbar-h) - 36px);
+  height: 100%;
+  min-height: 0;
   padding: 10px 12px 12px;
 }
 .graph-panel {
@@ -703,9 +735,14 @@ button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 }
 .tooltip strong { display: block; margin-bottom: 4px; font-size: 0.92rem; }
 
+.app-shell:not(.drawer-open) .splitter,
+.app-shell:not(.drawer-open) .drawer {
+  display: none;
+}
+
 .splitter {
   grid-column: 2;
-  grid-row: 4;
+
   position: relative;
   z-index: 18;
   cursor: col-resize;
@@ -733,9 +770,9 @@ body.splitter-dragging .splitter {
 
 .drawer {
   grid-column: 3;
-  grid-row: 4;
+  grid-row: 3;
   position: relative;
-  inset: auto;
+
   width: auto;
   height: 100%;
   transform: none;
@@ -1099,9 +1136,8 @@ body.splitter-dragging .splitter {
   :root { --topbar-h: 176px; }
   .app-shell { display: block; }
   .topbar {
-    grid-template-columns: 1fr;
-    align-items: start;
-    position: sticky;
+    flex-direction: column;
+    align-items: flex-start;
   }
   .topbar__center, .topbar__right { justify-content: flex-start; }
   .workspace { height: auto; }
