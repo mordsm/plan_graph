@@ -86,7 +86,7 @@ const state = {
   renderFrame: null,
   process: {
     mode: "demo",
-    scenarioId: "invoice_from_email",
+    scenarioId: "gpt_actions_assessment_review",
     currentStep: 0,
     previousStep: 0,
     playing: false,
@@ -105,6 +105,631 @@ const PROJECT_SECTIONS = [
 ];
 
 const PROCESS_SCENARIOS = [
+  {
+    "id": "gpt_actions_assessment_review",
+    "name": "GPT Actions → Assessment review / בדיקת הערכה",
+    "trigger": "gpt_actions",
+    "ingressLabel": "GPT Actions",
+    "token": {
+      "label": "GPT",
+      "compact": "Action",
+      "glyph": "🤖"
+    },
+    "event": {
+      "event_id": "evt_gpt_assessment_001",
+      "event_type": "gpt_action_assessment_review",
+      "source": "gpt_actions",
+      "target": "compass",
+      "created_at": "2026-08-23T11:45:00Z",
+      "status": "processing",
+      "payload": {
+        "request": "review assessment result",
+        "subject": "customer score",
+        "priority": "high"
+      },
+      "scenario_id": "gpt_actions_assessment_review",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "accept_gpt_action",
+        "node": "compass",
+        "label": "Receive",
+        "tokenLabel": "GPT Action",
+        "tokenGlyph": "🤖",
+        "explanation": "Compass receives the GPT Actions request and prepares to orchestrate the review flow.",
+        "findings": [
+          "Ingress: GPT Actions",
+          "Target: Compass",
+          "Mode: orchestration"
+        ]
+      },
+      {
+        "id": "route_to_assessment",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass routes the request to Assessment for evaluation.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: assessment review",
+          "Target: Assessment"
+        ]
+      },
+      {
+        "id": "assessment_review",
+        "node": "assessment",
+        "label": "Review",
+        "tokenLabel": "Assessment",
+        "tokenGlyph": "📊",
+        "explanation": "Assessment checks the situation and returns a structured review.",
+        "findings": [
+          "Assessment: in progress",
+          "Review: structured",
+          "Signal: complete"
+        ],
+        "internalProcess": [
+          "Receive request",
+          "Score inputs",
+          "Compare thresholds",
+          "Return review"
+        ]
+      },
+      {
+        "id": "rules_validate_assessment",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine validates the assessment outcome before Compass exposes it.",
+        "findings": [
+          "Rule: validation passed",
+          "Decision: approved",
+          "Status: completed"
+        ]
+      },
+      {
+        "id": "publish_review_result",
+        "node": "compass",
+        "label": "Publish",
+        "tokenLabel": "Result",
+        "tokenGlyph": "✓",
+        "explanation": "Compass publishes the assessment result and stores it for later replay.",
+        "findings": [
+          "Result: available",
+          "Replay: ready",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Assessment: reviewed",
+      "Rules: validated",
+      "Result: published",
+      "Replay: ready"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "gpt_actions_demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "accept_gpt_action",
+        "actor": "Compass",
+        "cause": "gpt_actions",
+        "input": "request: review assessment result; subject: customer score; priority: high",
+        "result": "Receive",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:45:00Z",
+        "detail": "Compass receives the GPT Actions request and prepares to orchestrate the review flow."
+      },
+      {
+        "action": "route_to_assessment",
+        "actor": "Compass",
+        "cause": "accept_gpt_action",
+        "input": "request: review assessment result; subject: customer score; priority: high",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:45:12Z",
+        "detail": "Compass routes the request to Assessment for evaluation."
+      },
+      {
+        "action": "assessment_review",
+        "actor": "Assessment",
+        "cause": "route_to_assessment",
+        "input": "request: review assessment result; subject: customer score; priority: high",
+        "result": "Review",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:45:24Z",
+        "detail": "Assessment checks the situation and returns a structured review."
+      },
+      {
+        "action": "rules_validate_assessment",
+        "actor": "Rules Engine",
+        "cause": "assessment_review",
+        "input": "gpt_actions_assessment_review",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:45:36Z",
+        "detail": "Rules Engine validates the assessment outcome before Compass exposes it."
+      },
+      {
+        "action": "publish_review_result",
+        "actor": "Compass",
+        "cause": "rules_validate_assessment",
+        "input": "gpt_actions_assessment_review",
+        "result": "Publish",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:45:48Z",
+        "detail": "Compass publishes the assessment result and stores it for later replay."
+      }
+    ]
+  },
+  {
+    "id": "gpt_actions_administrative_request",
+    "name": "GPT Actions → Administrative request / בקשה מנהלית",
+    "trigger": "gpt_actions",
+    "ingressLabel": "GPT Actions",
+    "token": {
+      "label": "GPT",
+      "compact": "Action",
+      "glyph": "🤖"
+    },
+    "event": {
+      "event_id": "evt_gpt_admin_001",
+      "event_type": "gpt_action_administrative_request",
+      "source": "gpt_actions",
+      "target": "compass",
+      "created_at": "2026-08-23T11:55:00Z",
+      "status": "processing",
+      "payload": {
+        "request": "prepare administrative follow-up",
+        "topic": "document routing",
+        "priority": "medium"
+      },
+      "scenario_id": "gpt_actions_administrative_request",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "accept_admin_request",
+        "node": "compass",
+        "label": "Receive",
+        "tokenLabel": "GPT Action",
+        "tokenGlyph": "🤖",
+        "explanation": "Compass receives a GPT Actions request for an administrative follow-up.",
+        "findings": [
+          "Ingress: GPT Actions",
+          "Target: Compass",
+          "Mode: orchestration"
+        ]
+      },
+      {
+        "id": "route_to_admin",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass routes the request to Administrative for handling.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: admin request",
+          "Target: Administrative"
+        ]
+      },
+      {
+        "id": "administrative_handle",
+        "node": "administrative",
+        "label": "Handle",
+        "tokenLabel": "Admin",
+        "tokenGlyph": "🗂",
+        "explanation": "Administrative handles the request and prepares the response bundle.",
+        "findings": [
+          "Administrative: working",
+          "Bundle: prepared",
+          "Status: queued"
+        ],
+        "internalProcess": [
+          "Receive request",
+          "Check context",
+          "Prepare response",
+          "Queue follow-up"
+        ]
+      },
+      {
+        "id": "rules_finalize_admin",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine checks policy before Compass publishes the administrative result.",
+        "findings": [
+          "Rule: policy check",
+          "Decision: approved",
+          "Status: completed"
+        ]
+      },
+      {
+        "id": "publish_admin_result",
+        "node": "compass",
+        "label": "Publish",
+        "tokenLabel": "Result",
+        "tokenGlyph": "✓",
+        "explanation": "Compass stores and publishes the administrative result.",
+        "findings": [
+          "Result: available",
+          "Replay: ready",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Administrative: engaged",
+      "Rules: validated",
+      "Result: published",
+      "Replay: ready"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "gpt_actions_demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "accept_admin_request",
+        "actor": "Compass",
+        "cause": "gpt_actions",
+        "input": "request: prepare administrative follow-up; topic: document routing; priority: medium",
+        "result": "Receive",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:55:00Z",
+        "detail": "Compass receives a GPT Actions request for an administrative follow-up."
+      },
+      {
+        "action": "route_to_admin",
+        "actor": "Compass",
+        "cause": "accept_admin_request",
+        "input": "request: prepare administrative follow-up; topic: document routing; priority: medium",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:55:12Z",
+        "detail": "Compass routes the request to Administrative for handling."
+      },
+      {
+        "action": "administrative_handle",
+        "actor": "Administrative",
+        "cause": "route_to_admin",
+        "input": "request: prepare administrative follow-up; topic: document routing; priority: medium",
+        "result": "Handle",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:55:24Z",
+        "detail": "Administrative handles the request and prepares the response bundle."
+      },
+      {
+        "action": "rules_finalize_admin",
+        "actor": "Rules Engine",
+        "cause": "administrative_handle",
+        "input": "gpt_actions_administrative_request",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:55:36Z",
+        "detail": "Rules Engine checks policy before Compass publishes the administrative result."
+      },
+      {
+        "action": "publish_admin_result",
+        "actor": "Compass",
+        "cause": "rules_finalize_admin",
+        "input": "gpt_actions_administrative_request",
+        "result": "Publish",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:55:48Z",
+        "detail": "Compass stores and publishes the administrative result."
+      }
+    ]
+  },
+  {
+    "id": "self_manager_routine_sync",
+    "name": "Self Manager routine sync / סנכרון עצמי",
+    "trigger": "self_manager",
+    "ingressLabel": "Self Manager",
+    "token": {
+      "label": "Routine",
+      "compact": "Self",
+      "glyph": "🔄"
+    },
+    "event": {
+      "event_id": "evt_self_sync_001",
+      "event_type": "self_manager_sync",
+      "source": "self_manager",
+      "target": "compass",
+      "created_at": "2026-08-23T12:05:00Z",
+      "status": "processing",
+      "payload": {
+        "routine": "daily sync",
+        "goal": "review priorities",
+        "mode": "self-led"
+      },
+      "scenario_id": "self_manager_routine_sync",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "self_manager_signal",
+        "node": "self_manager",
+        "label": "Signal",
+        "tokenLabel": "Routine",
+        "tokenGlyph": "🔄",
+        "explanation": "Self Manager emits a routine sync signal for Compass.",
+        "findings": [
+          "Source: self_manager",
+          "Routine: daily sync",
+          "Mode: self-led"
+        ]
+      },
+      {
+        "id": "route_to_self_manager",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass coordinates the sync and routes the event back into Self Manager.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: sync routine",
+          "Target: Self Manager"
+        ]
+      },
+      {
+        "id": "self_manager_review",
+        "node": "self_manager",
+        "label": "Review",
+        "tokenLabel": "Self Manager",
+        "tokenGlyph": "🧭",
+        "explanation": "Self Manager reviews the day and updates priorities.",
+        "findings": [
+          "Priorities: updated",
+          "Focus: current",
+          "Status: working"
+        ],
+        "internalProcess": [
+          "Review goals",
+          "Pick next action",
+          "Update priorities",
+          "Confirm state"
+        ]
+      },
+      {
+        "id": "rules_sync_check",
+        "node": "rules_engine",
+        "label": "Rules",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine checks whether the self-managed routine fits policy or timing constraints.",
+        "findings": [
+          "Rule: timing ok",
+          "Constraint: satisfied",
+          "Status: completed"
+        ]
+      },
+      {
+        "id": "publish_self_state",
+        "node": "compass",
+        "label": "Publish",
+        "tokenLabel": "State",
+        "tokenGlyph": "✓",
+        "explanation": "Compass publishes the updated self-management state.",
+        "findings": [
+          "State: updated",
+          "Replay: ready",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Self Manager: synced",
+      "Priorities: updated",
+      "Rules: checked",
+      "State: published"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "gpt_actions_demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "self_manager_signal",
+        "actor": "Self Manager",
+        "cause": "self_manager",
+        "input": "routine: daily sync; goal: review priorities; mode: self-led",
+        "result": "Signal",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:05:00Z",
+        "detail": "Self Manager emits a routine sync signal for Compass."
+      },
+      {
+        "action": "route_to_self_manager",
+        "actor": "Compass",
+        "cause": "self_manager_signal",
+        "input": "routine: daily sync; goal: review priorities; mode: self-led",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:05:12Z",
+        "detail": "Compass coordinates the sync and routes the event back into Self Manager."
+      },
+      {
+        "action": "self_manager_review",
+        "actor": "Self Manager",
+        "cause": "route_to_self_manager",
+        "input": "routine: daily sync; goal: review priorities; mode: self-led",
+        "result": "Review",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:05:24Z",
+        "detail": "Self Manager reviews the day and updates priorities."
+      },
+      {
+        "action": "rules_sync_check",
+        "actor": "Rules Engine",
+        "cause": "self_manager_review",
+        "input": "self_manager_routine_sync",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:05:36Z",
+        "detail": "Rules Engine checks whether the self-managed routine fits policy or timing constraints."
+      },
+      {
+        "action": "publish_self_state",
+        "actor": "Compass",
+        "cause": "rules_sync_check",
+        "input": "self_manager_routine_sync",
+        "result": "Publish",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:05:48Z",
+        "detail": "Compass publishes the updated self-management state."
+      }
+    ]
+  },
+  {
+    "id": "rules_engine_policy_check",
+    "name": "Rules Engine policy check / בדיקת חוקים",
+    "trigger": "gpt_actions",
+    "ingressLabel": "GPT Actions",
+    "token": {
+      "label": "Rules",
+      "compact": "Policy",
+      "glyph": "⚙"
+    },
+    "event": {
+      "event_id": "evt_rules_policy_001",
+      "event_type": "rules_engine_policy_check",
+      "source": "gpt_actions",
+      "target": "compass",
+      "created_at": "2026-08-23T12:15:00Z",
+      "status": "processing",
+      "payload": {
+        "request": "check policy for task creation",
+        "scope": "general",
+        "priority": "medium"
+      },
+      "scenario_id": "rules_engine_policy_check",
+      "current_step": 0
+    },
+    "steps": [
+      {
+        "id": "accept_policy_request",
+        "node": "compass",
+        "label": "Receive",
+        "tokenLabel": "GPT Action",
+        "tokenGlyph": "🤖",
+        "explanation": "Compass receives a GPT Actions policy request.",
+        "findings": [
+          "Ingress: GPT Actions",
+          "Target: Compass",
+          "Mode: orchestration"
+        ]
+      },
+      {
+        "id": "route_to_rules",
+        "node": "compass",
+        "label": "Route",
+        "tokenLabel": "Event",
+        "tokenGlyph": "↗",
+        "explanation": "Compass routes the policy check to Rules Engine.",
+        "findings": [
+          "Actor: Compass",
+          "Intent: policy check",
+          "Target: Rules Engine"
+        ]
+      },
+      {
+        "id": "rules_engine_check",
+        "node": "rules_engine",
+        "label": "Evaluate",
+        "tokenLabel": "RuleCheck",
+        "tokenGlyph": "⚙",
+        "explanation": "Rules Engine evaluates the request and returns a decision.",
+        "findings": [
+          "Policy: checked",
+          "Decision: approved",
+          "Status: completed"
+        ],
+        "internalProcess": [
+          "Receive request",
+          "Evaluate rule set",
+          "Resolve decision",
+          "Return decision"
+        ]
+      },
+      {
+        "id": "publish_rules_decision",
+        "node": "compass",
+        "label": "Publish",
+        "tokenLabel": "Result",
+        "tokenGlyph": "✓",
+        "explanation": "Compass publishes the rules decision and saves it to the replay log.",
+        "findings": [
+          "Decision: published",
+          "Replay: ready",
+          "Scenario: completed"
+        ]
+      }
+    ],
+    "currentState": [
+      "Rules Engine: evaluated",
+      "Decision: approved",
+      "Result: published",
+      "Replay: ready"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "gpt_actions_demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "accept_policy_request",
+        "actor": "Compass",
+        "cause": "gpt_actions",
+        "input": "request: check policy for task creation; scope: general; priority: medium",
+        "result": "Receive",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:15:00Z",
+        "detail": "Compass receives a GPT Actions policy request."
+      },
+      {
+        "action": "route_to_rules",
+        "actor": "Compass",
+        "cause": "accept_policy_request",
+        "input": "request: check policy for task creation; scope: general; priority: medium",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:15:12Z",
+        "detail": "Compass routes the policy check to Rules Engine."
+      },
+      {
+        "action": "rules_engine_check",
+        "actor": "Rules Engine",
+        "cause": "route_to_rules",
+        "input": "request: check policy for task creation; scope: general; priority: medium",
+        "result": "Evaluate",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:15:24Z",
+        "detail": "Rules Engine evaluates the request and returns a decision."
+      },
+      {
+        "action": "publish_rules_decision",
+        "actor": "Compass",
+        "cause": "rules_engine_check",
+        "input": "rules_engine_policy_check",
+        "result": "Publish",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:15:36Z",
+        "detail": "Compass publishes the rules decision and saves it to the replay log."
+      }
+    ]
+  },
   {
     "id": "invoice_from_email",
     "name": "Invoice received by email / חשבונית התקבלה במייל",
@@ -293,7 +918,8 @@ const PROCESS_SCENARIOS = [
         "timestamp": "2026-08-23T10:32:00Z",
         "detail": "Compass records the result and exposes the current state to the user."
       }
-    ]
+    ],
+    "ingressLabel": "Mail Manager"
   },
   {
     "id": "payment_due_reminder",
@@ -456,7 +1082,8 @@ const PROCESS_SCENARIOS = [
         "timestamp": "2026-08-23T10:40:48Z",
         "detail": "Compass publishes the result and updates the current financial state."
       }
-    ]
+    ],
+    "ingressLabel": "Scheduler"
   },
   {
     "id": "bank_transaction_detected",
@@ -618,7 +1245,8 @@ const PROCESS_SCENARIOS = [
         "timestamp": "2026-08-23T11:05:48Z",
         "detail": "Compass stores the updated state for later replay and summaries."
       }
-    ]
+    ],
+    "ingressLabel": "Bank Connector"
   },
   {
     "id": "unusual_expense_detected",
@@ -750,7 +1378,8 @@ const PROCESS_SCENARIOS = [
         "timestamp": "2026-08-23T11:12:36Z",
         "detail": "Compass forwards the alert to the user and stores the result."
       }
-    ]
+    ],
+    "ingressLabel": "Economic Manager"
   },
   {
     "id": "user_financial_question",
@@ -886,7 +1515,8 @@ const PROCESS_SCENARIOS = [
         "timestamp": "2026-08-23T11:20:36Z",
         "detail": "Compass returns the answer to the user."
       }
-    ]
+    ],
+    "ingressLabel": "User"
   },
   {
     "id": "monthly_report",
@@ -1026,7 +1656,8 @@ const PROCESS_SCENARIOS = [
         "timestamp": "2026-08-23T06:00:36Z",
         "detail": "Compass delivers the report to the user."
       }
-    ]
+    ],
+    "ingressLabel": "Scheduler"
   },
   {
     "id": "manual_financial_entry",
@@ -1186,7 +1817,8 @@ const PROCESS_SCENARIOS = [
         "timestamp": "2026-08-23T12:00:48Z",
         "detail": "Compass completes the workflow and updates the summary state."
       }
-    ]
+    ],
+    "ingressLabel": "User"
   }
 ];
 
@@ -1585,6 +2217,7 @@ function renderProcessVisualization() {
   const step = scenario.steps[stepIndex];
   const event = { ...scenario.event, current_step: stepIndex, status: stepIndex === scenario.steps.length - 1 ? "completed" : "processing" };
   const actionLog = Array.isArray(scenario.actionLog) ? scenario.actionLog : [];
+  const ingressLabel = scenario.ingressLabel || String(scenario.event?.source || "").replaceAll("_", " ").replace(/\w/g, (char) => char.toUpperCase());
 
   renderScenarioSelector();
   if (el.demoModeButton && el.liveModeButton) {
@@ -1643,6 +2276,7 @@ function renderProcessVisualization() {
 
     el.stepExplanation.innerHTML = `
       <div class="step-explanation__meta">Step ${stepIndex + 1} of ${scenario.steps.length} · Trigger: ${escapeHtml(scenario.trigger)} · Event: ${escapeHtml(event.event_id)}</div>
+      <div class="process-ingress"><span class="process-ingress__label">Ingress:</span><span class="process-ingress__value">${escapeHtml(ingressLabel)} → Compass</span></div>
       <h3>${escapeHtml(step.label)}</h3>
       <p>${escapeHtml(step.explanation)}</p>
       <div class="process-continuation">
