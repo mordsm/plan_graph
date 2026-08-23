@@ -93,6 +93,7 @@ const state = {
     speed: 1,
     timer: null,
   },
+  userAdjustedLayout: false,
 };
 
 const PROJECT_SECTIONS = [
@@ -3570,7 +3571,14 @@ function branchDirectionFor(projectId, index = 0) {
 
 function branchDistanceFor(node) {
   const depth = node?.depth || 1;
-  return 245 + Math.max(0, depth - 1) * 46;
+  return 310 + Math.max(0, depth - 1) * 54;
+}
+
+const ECONOMIC_PROJECT_IDS = new Set(["economic_manager", "rules_engine"]);
+const NON_ECONOMIC_PROJECT_IDS = new Set(["gpt", "isracard_mail", "mail_manager", "assessment", "self_manager", "administrative"]);
+
+function clusterSideFor(projectId) {
+  return ECONOMIC_PROJECT_IDS.has(projectId) ? "economic" : "other";
 }
 
 function classifyHierarchyProject(project) {
@@ -3778,8 +3786,10 @@ function applyHierarchyHighlight(nodeSelection, linkSelection, flowSelection, fo
     .classed("is-dimmed", false);
 }
 
-function renderNetworkGraph() {
+function renderNetworkGraph(options = {}) {
   if (!state.server || !el.graphSvg || !el.graphViewport) return;
+
+  const autoFit = options.autoFit !== false;
 
   const { width, height } = ensureGraphDimensions(el.graphViewport);
   const treeData = cloneHierarchyForCollapse(buildHierarchyTree(state.server.projects));
@@ -3794,7 +3804,7 @@ function renderNetworkGraph() {
     currentOffsets[id] = next;
   };
 
-  const treeLayout = d3.tree().nodeSize([116, 240]).separation((a, b) => (a.parent === b.parent ? 1.12 : 1.36));
+  const treeLayout = d3.tree().nodeSize([132, 280]).separation((a, b) => (a.parent === b.parent ? 1.16 : 1.42));
   const hierarchyNodes = [fullRoot];
   const hierarchyLinks = [];
   const positionMap = new Map();
@@ -3805,22 +3815,51 @@ function renderNetworkGraph() {
   positionMap.set("compass", rootDisplay);
 
   const rootChildren = fullRoot.children || [];
+  const rootGroups = {
+    other: rootChildren.filter((child) => clusterSideFor(child.data.project_ref) === "other"),
+    economic: rootChildren.filter((child) => clusterSideFor(child.data.project_ref) === "economic"),
+  };
+  const laneSpacingY = 260;
+  const laneSpacingX = 560;
+  const lanes = {
+    other: {
+      direction: normalizeVector({ vx: -1, vy: 0 }),
+      perp: { vx: 0, vy: 1 },
+      x: rootDisplay.x - laneSpacingX,
+      startY: rootDisplay.y - ((rootGroups.other.length - 1) * laneSpacingY) / 2,
+    },
+    economic: {
+      direction: normalizeVector({ vx: 1, vy: 0 }),
+      perp: { vx: 0, vy: 1 },
+      x: rootDisplay.x + laneSpacingX,
+      startY: rootDisplay.y - ((rootGroups.economic.length - 1) * laneSpacingY) / 2,
+    },
+  };
+
   rootChildren.forEach((child, index) => {
     const subtree = d3.hierarchy(child.data, (d) => d.children || null);
     treeLayout(subtree);
-    const direction = branchDirectionFor(child.data.project_ref, index);
-    const perp = perpendicularVector(direction);
+    const side = clusterSideFor(child.data.project_ref);
+    const lane = lanes[side];
+    const sideIndex = rootGroups[side].findIndex((item) => item.data.project_ref === child.data.project_ref);
     const branchOrigin = {
-      x: rootDisplay.x + direction.vx * branchDistanceFor(subtree),
-      y: rootDisplay.y + direction.vy * branchDistanceFor(subtree),
+      x: lane.x,
+      y: lane.startY + sideIndex * laneSpacingY,
+    };
+    const direction = lane.direction;
+    const perp = lane.perp;
+    const depthOffset = branchDistanceFor(subtree);
+    const rootBranchOrigin = {
+      x: branchOrigin.x + direction.vx * depthOffset,
+      y: branchOrigin.y + direction.vy * depthOffset,
     };
 
     const walk = (node, cumulativeOffset = { dx: rootOffset.dx, dy: rootOffset.dy }) => {
       const key = hierarchyNodeKey(node);
       const nodeOffset = getOffset(key);
       const nextOffset = { dx: cumulativeOffset.dx + nodeOffset.dx, dy: cumulativeOffset.dy + nodeOffset.dy };
-      const baseX = branchOrigin.x + direction.vx * node.y + perp.vx * node.x;
-      const baseY = branchOrigin.y + direction.vy * node.y + perp.vy * node.x;
+      const baseX = rootBranchOrigin.x + direction.vx * node.y + perp.vx * node.x;
+      const baseY = rootBranchOrigin.y + direction.vy * node.y + perp.vy * node.x;
       const display = { x: baseX + nextOffset.dx, y: baseY + nextOffset.dy };
       node.__display = display;
       positionMap.set(key, display);
@@ -3938,11 +3977,15 @@ function renderNetworkGraph() {
   const dragBehavior = d3.drag()
     .on("start", (event) => {
       event.sourceEvent?.stopPropagation?.();
+      state.userAdjustedLayout = true;
     })
     .on("drag", (event, d) => {
       const scale = state.currentGraphTransform?.k || 1;
       addOffset(hierarchyNodeKey(d), event.dx / scale, event.dy / scale);
-      renderNetworkGraph();
+      renderNetworkGraph({ autoFit: false });
+    })
+    .on("end", () => {
+      renderNetworkGraph({ autoFit: false });
     });
 
   nodeSelection
@@ -3982,13 +4025,19 @@ function renderNetworkGraph() {
 
   const graphBoundsWidth = Math.max(1, bounds.maxX - bounds.minX);
   const graphBoundsHeight = Math.max(1, bounds.maxY - bounds.minY);
-  const fitScale = Math.min(width / (graphBoundsWidth + 180), height / (graphBoundsHeight + 140));
-  const finalScale = Math.max(0.9, Math.min(3, fitScale * 1.08));
-  const finalX = width / 2 - ((bounds.minX + bounds.maxX) / 2) * finalScale;
-  const finalY = height * 0.58 - ((bounds.minY + bounds.maxY) / 2) * finalScale;
-  const transform = d3.zoomIdentity.translate(finalX, finalY).scale(finalScale);
-  state.currentGraphTransform = transform;
-  svg.call(zoom.transform, transform);
+  if (autoFit && !state.userAdjustedLayout) {
+    const fitScale = Math.min(width / (graphBoundsWidth + 180), height / (graphBoundsHeight + 140));
+    const finalScale = Math.max(0.9, Math.min(3, fitScale * 1.08));
+    const finalX = width / 2 - ((bounds.minX + bounds.maxX) / 2) * finalScale;
+    const finalY = height * 0.58 - ((bounds.minY + bounds.maxY) / 2) * finalScale;
+    const transform = d3.zoomIdentity.translate(finalX, finalY).scale(finalScale);
+    state.currentGraphTransform = transform;
+    svg.call(zoom.transform, transform);
+  } else {
+    const preserved = state.currentGraphTransform || d3.zoomIdentity;
+    state.currentGraphTransform = preserved;
+    svg.call(zoom.transform, preserved);
+  }
 
   root.on("click", () => {
     state.selectedNodeId = null;
