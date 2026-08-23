@@ -631,31 +631,6 @@ function renderProcessVisualization() {
           <div class="process-continuation__chips">${stateChips}</div>
         </div>
       </div>
-      <dl>
-        <dt>Event</dt><dd>${escapeHtml(event.event_id)} · ${escapeHtml(event.event_type)} · ${escapeHtml(event.status)}</dd>
-        ${step.findings.map((finding) => `<dt>Detail</dt><dd>${escapeHtml(finding)}</dd>`).join("")}
-      </dl>
-    `;
-  }
-
-  if (el.internalProcessView) {
-    const internal = step.internalProcess || [];
-    el.internalProcessView.innerHTML = internal.length ? `
-      <div class="internal-process-view__title">Economic Manager internal process</div>
-      <div class="internal-process-chain">
-        ${internal.map((item, index) => `<span class="${index <= Math.min(internal.length - 1, 2) ? "active" : ""}">${escapeHtml(item)}</span>`).join("")}
-      </div>
-    ` : `
-      <div class="internal-process-view__title">Internal process</div>
-      <div class="internal-process-view__empty">No project drill-down for this step.</div>
-    `;
-  }
-
-  if (el.currentStateSummary) {
-    const done = stepIndex === scenario.steps.length - 1;
-    el.currentStateSummary.innerHTML = `
-      <div class="current-state-summary__title">${done ? "Scenario completed" : "Current state"}</div>
-      <ul>${scenario.currentState.map((item, index) => `<li class="${done || index <= stepIndex ? "visible" : ""}">${escapeHtml(item)}</li>`).join("")}</ul>
     `;
   }
 }
