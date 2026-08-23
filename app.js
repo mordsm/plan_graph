@@ -226,6 +226,73 @@ const PROCESS_SCENARIOS = [
       "Rule: evaluated",
       "Task: created",
       "Notification: pending"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "invoice_demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "receive_email",
+        "actor": "Mail Manager",
+        "cause": "email_received",
+        "input": "supplier: Electric Company; amount: 438 NIS; due_date: 2026-08-30; document_type: Invoice for payment",
+        "result": "Email received",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:31:00Z",
+        "detail": "Mail Manager receives an invoice email and opens a processing event."
+      },
+      {
+        "action": "extract_financial_data",
+        "actor": "Mail Manager",
+        "cause": "receive_email",
+        "input": "supplier: Electric Company; amount: 438 NIS; due_date: 2026-08-30; document_type: Invoice for payment",
+        "result": "Extract",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:31:12Z",
+        "detail": "Mail Manager extracts the supplier, amount, due date, and invoice type."
+      },
+      {
+        "action": "route_to_compass",
+        "actor": "Compass",
+        "cause": "extract_financial_data",
+        "input": "supplier: Electric Company; amount: 438 NIS; due_date: 2026-08-30; document_type: Invoice for payment",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:31:24Z",
+        "detail": "Compass receives a FinancialEvent and chooses Economic Manager as the relevant agent."
+      },
+      {
+        "action": "economic_process",
+        "actor": "Economic Manager",
+        "cause": "route_to_compass",
+        "input": "invoice_received",
+        "result": "Financial event",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:31:36Z",
+        "detail": "Economic Manager classifies the event, validates the extracted data, and creates an obligation."
+      },
+      {
+        "action": "rules_eval",
+        "actor": "Rules Engine",
+        "cause": "economic_process",
+        "input": "invoice_received",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:31:48Z",
+        "detail": "Rules Engine evaluates whether the obligation needs a reminder or task."
+      },
+      {
+        "action": "task_created",
+        "actor": "Compass",
+        "cause": "rules_eval",
+        "input": "invoice_received",
+        "result": "Task created",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:32:00Z",
+        "detail": "Compass records the result and exposes the current state to the user."
+      }
     ]
   },
   {
@@ -332,6 +399,63 @@ const PROCESS_SCENARIOS = [
       "Rule: evaluated",
       "Task: created",
       "Alert: pending"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "trigger_due",
+        "actor": "Compass",
+        "cause": "payment_due",
+        "input": "due_date: 2026-08-30",
+        "result": "Trigger",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:40:00Z",
+        "detail": "A scheduled trigger marks an obligation as due and asks Compass to orchestrate the response."
+      },
+      {
+        "action": "route_to_economic",
+        "actor": "Compass",
+        "cause": "trigger_due",
+        "input": "due_date: 2026-08-30",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:40:12Z",
+        "detail": "Compass routes the due event to Economic Manager for obligation inspection."
+      },
+      {
+        "action": "inspect_obligation",
+        "actor": "Economic Manager",
+        "cause": "route_to_economic",
+        "input": "due_date: 2026-08-30",
+        "result": "Inspect",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:40:24Z",
+        "detail": "Economic Manager checks the obligation and determines whether it is already paid."
+      },
+      {
+        "action": "rules_reminder",
+        "actor": "Rules Engine",
+        "cause": "inspect_obligation",
+        "input": "payment_due",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:40:36Z",
+        "detail": "Rules Engine decides whether to send a reminder, task, or alert."
+      },
+      {
+        "action": "task_or_alert",
+        "actor": "Compass",
+        "cause": "rules_reminder",
+        "input": "payment_due",
+        "result": "Result",
+        "status": "completed",
+        "timestamp": "2026-08-23T10:40:48Z",
+        "detail": "Compass publishes the result and updates the current financial state."
+      }
     ]
   },
   {
@@ -437,6 +561,63 @@ const PROCESS_SCENARIOS = [
       "Financial state: updated",
       "Rule: evaluated",
       "Alert: none"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "detect_transaction",
+        "actor": "Bank Connector",
+        "cause": "bank_transaction_detected",
+        "input": "amount: -128 NIS; description: Phone bill; account: Main",
+        "result": "Transaction",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:05:00Z",
+        "detail": "A connector detects a new bank transaction and sends it into Compass."
+      },
+      {
+        "action": "route_transaction",
+        "actor": "Compass",
+        "cause": "detect_transaction",
+        "input": "amount: -128 NIS; description: Phone bill; account: Main",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:05:12Z",
+        "detail": "Compass routes the transaction to Economic Manager for classification."
+      },
+      {
+        "action": "classify_transaction",
+        "actor": "Economic Manager",
+        "cause": "route_transaction",
+        "input": "amount: -128 NIS; description: Phone bill; account: Main",
+        "result": "Classify",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:05:24Z",
+        "detail": "Economic Manager classifies the transaction and matches it to existing obligations."
+      },
+      {
+        "action": "rules_update",
+        "actor": "Rules Engine",
+        "cause": "classify_transaction",
+        "input": "bank_transaction_detected",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:05:36Z",
+        "detail": "Rules Engine checks whether the transaction changes alerts or follow-up tasks."
+      },
+      {
+        "action": "store_state",
+        "actor": "Compass",
+        "cause": "rules_update",
+        "input": "bank_transaction_detected",
+        "result": "Stored",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:05:48Z",
+        "detail": "Compass stores the updated state for later replay and summaries."
+      }
     ]
   },
   {
@@ -522,6 +703,53 @@ const PROCESS_SCENARIOS = [
       "Anomaly: detected",
       "Alert: created",
       "User notification: pending"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "receive_transaction",
+        "actor": "Economic Manager",
+        "cause": "transaction",
+        "input": "amount: 892 NIS; merchant: Luxury Store",
+        "result": "Transaction",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:12:00Z",
+        "detail": "Economic Manager receives a transaction and compares it with history and rules."
+      },
+      {
+        "action": "detect_anomaly",
+        "actor": "Economic Manager",
+        "cause": "receive_transaction",
+        "input": "amount: 892 NIS; merchant: Luxury Store",
+        "result": "Detect anomaly",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:12:12Z",
+        "detail": "The transaction looks unusual, so Economic Manager marks it as a possible anomaly."
+      },
+      {
+        "action": "rules_anomaly",
+        "actor": "Rules Engine",
+        "cause": "detect_anomaly",
+        "input": "amount: 892 NIS; merchant: Luxury Store",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:12:24Z",
+        "detail": "Rules Engine confirms the anomaly and decides whether to notify the user."
+      },
+      {
+        "action": "notify_compass",
+        "actor": "Compass",
+        "cause": "rules_anomaly",
+        "input": "unusual_expense_detected",
+        "result": "Notify",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:12:36Z",
+        "detail": "Compass forwards the alert to the user and stores the result."
+      }
     ]
   },
   {
@@ -611,6 +839,53 @@ const PROCESS_SCENARIOS = [
       "Query: answered",
       "Financial data: aggregated",
       "Answer: ready"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "receive_question",
+        "actor": "Compass",
+        "cause": "user_request",
+        "input": "query: How much did I spend on insurance this month?",
+        "result": "Question",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:20:00Z",
+        "detail": "The user asks Compass a financial question."
+      },
+      {
+        "action": "route_to_economic",
+        "actor": "Compass",
+        "cause": "receive_question",
+        "input": "query: How much did I spend on insurance this month?",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:20:12Z",
+        "detail": "Compass identifies the financial intent and routes it to Economic Manager."
+      },
+      {
+        "action": "aggregate_data",
+        "actor": "Economic Manager",
+        "cause": "route_to_economic",
+        "input": "query: How much did I spend on insurance this month?",
+        "result": "Aggregate",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:20:24Z",
+        "detail": "Economic Manager queries financial data and aggregates the answer."
+      },
+      {
+        "action": "answer_user",
+        "actor": "Compass",
+        "cause": "aggregate_data",
+        "input": "financial_question",
+        "result": "Answer",
+        "status": "completed",
+        "timestamp": "2026-08-23T11:20:36Z",
+        "detail": "Compass returns the answer to the user."
+      }
     ]
   },
   {
@@ -704,6 +979,53 @@ const PROCESS_SCENARIOS = [
       "Expenses: summarized",
       "Obligations: summarized",
       "User notification: pending"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "scheduled_trigger",
+        "actor": "Compass",
+        "cause": "scheduled_review",
+        "input": "period: 2026-08",
+        "result": "Scheduled",
+        "status": "completed",
+        "timestamp": "2026-08-23T06:00:00Z",
+        "detail": "A scheduled review trigger asks Compass to prepare a monthly financial report."
+      },
+      {
+        "action": "collect_data",
+        "actor": "Economic Manager",
+        "cause": "scheduled_trigger",
+        "input": "period: 2026-08",
+        "result": "Collect",
+        "status": "completed",
+        "timestamp": "2026-08-23T06:00:12Z",
+        "detail": "Economic Manager collects income, expenses, and obligations for the period."
+      },
+      {
+        "action": "detect_anomalies",
+        "actor": "Rules Engine",
+        "cause": "collect_data",
+        "input": "period: 2026-08",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T06:00:24Z",
+        "detail": "Rules Engine checks the collected data for anomalies and follow-up needs."
+      },
+      {
+        "action": "deliver_report",
+        "actor": "Compass",
+        "cause": "detect_anomalies",
+        "input": "scheduled_financial_review",
+        "result": "Deliver",
+        "status": "completed",
+        "timestamp": "2026-08-23T06:00:36Z",
+        "detail": "Compass delivers the report to the user."
+      }
     ]
   },
   {
@@ -807,6 +1129,63 @@ const PROCESS_SCENARIOS = [
       "Financial event: created",
       "Rule: evaluated",
       "Current state: updated"
+    ],
+    "replay": {
+      "source": "action_log",
+      "mode": "demo",
+      "ready": true
+    },
+    "actionLog": [
+      {
+        "action": "enter_data",
+        "actor": "Compass",
+        "cause": "manual_entry",
+        "input": "amount: 74 NIS; kind: expense",
+        "result": "Entry",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:00:00Z",
+        "detail": "The user enters a financial item manually."
+      },
+      {
+        "action": "route_manual",
+        "actor": "Compass",
+        "cause": "enter_data",
+        "input": "amount: 74 NIS; kind: expense",
+        "result": "Route",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:00:12Z",
+        "detail": "Compass routes the manual entry to Economic Manager."
+      },
+      {
+        "action": "store_entry",
+        "actor": "Economic Manager",
+        "cause": "route_manual",
+        "input": "amount: 74 NIS; kind: expense",
+        "result": "Store",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:00:24Z",
+        "detail": "Economic Manager stores the entry as a financial event."
+      },
+      {
+        "action": "rules_check",
+        "actor": "Rules Engine",
+        "cause": "store_entry",
+        "input": "manual_financial_entry",
+        "result": "Rules",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:00:36Z",
+        "detail": "Rules Engine checks whether the entry should create a follow-up task."
+      },
+      {
+        "action": "finish",
+        "actor": "Compass",
+        "cause": "rules_check",
+        "input": "manual_financial_entry",
+        "result": "Done",
+        "status": "completed",
+        "timestamp": "2026-08-23T12:00:48Z",
+        "detail": "Compass completes the workflow and updates the summary state."
+      }
     ]
   }
 ];
@@ -1205,6 +1584,7 @@ function renderProcessVisualization() {
   const stepIndex = clampProcessStep(state.process.currentStep);
   const step = scenario.steps[stepIndex];
   const event = { ...scenario.event, current_step: stepIndex, status: stepIndex === scenario.steps.length - 1 ? "completed" : "processing" };
+  const actionLog = Array.isArray(scenario.actionLog) ? scenario.actionLog : [];
 
   renderScenarioSelector();
   if (el.demoModeButton && el.liveModeButton) {
@@ -1240,8 +1620,29 @@ function renderProcessVisualization() {
     const stateChips = currentState.length
       ? currentState.map((item, index) => `<span class="process-state${done || index <= stepIndex ? " visible" : ""}">${escapeHtml(item)}</span>`).join("")
       : '<span class="process-state process-state--empty">No current state</span>';
+    const logChips = actionLog.length
+      ? actionLog.map((entry, index) => {
+          const stateClass = index < stepIndex ? "completed" : index === stepIndex ? "active" : "pending";
+          const timeText = new Date(entry.timestamp || event.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return `
+            <article class="action-log__entry ${stateClass}">
+              <div class="action-log__top">
+                <span class="action-log__time">${escapeHtml(timeText)}</span>
+                <span class="action-log__action">${escapeHtml(entry.action)}</span>
+              </div>
+              <div class="action-log__body">
+                <strong>${escapeHtml(entry.actor)}</strong>
+                <span>cause: ${escapeHtml(entry.cause)}</span>
+                <span>input: ${escapeHtml(entry.input)}</span>
+                <span>result: ${escapeHtml(entry.result)}</span>
+              </div>
+            </article>
+          `;
+        }).join("")
+      : '<span class="process-chip process-chip--empty">No action log</span>';
+
     el.stepExplanation.innerHTML = `
-      <div class="step-explanation__meta">Step ${stepIndex + 1} of ${scenario.steps.length} · Trigger: ${escapeHtml(scenario.trigger)}</div>
+      <div class="step-explanation__meta">Step ${stepIndex + 1} of ${scenario.steps.length} · Trigger: ${escapeHtml(scenario.trigger)} · Event: ${escapeHtml(event.event_id)}</div>
       <h3>${escapeHtml(step.label)}</h3>
       <p>${escapeHtml(step.explanation)}</p>
       <div class="process-continuation">
@@ -1252,6 +1653,13 @@ function renderProcessVisualization() {
         <div class="process-continuation__row">
           <span class="process-continuation__label">Current state</span>
           <div class="process-continuation__chips">${stateChips}</div>
+        </div>
+        <div class="process-continuation__row process-continuation__row--wide">
+          <span class="process-continuation__label">Action log</span>
+          <div class="action-log">
+            <div class="action-log__meta">Replay source: action log · ${escapeHtml(scenario.replay?.ready ? 'ready' : 'draft')}</div>
+            <div class="action-log__list">${logChips}</div>
+          </div>
         </div>
       </div>
     `;
