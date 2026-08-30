@@ -28,6 +28,7 @@ const el = {
   scenarioSpeedSelect: document.getElementById("scenarioSpeedSelect"),
   processBar: document.getElementById("processBar"),
   stepExplanation: document.getElementById("stepExplanation"),
+  processVisualization: document.getElementById("processVisualization"),
   internalProcessView: document.getElementById("internalProcessView"),
   currentStateSummary: document.getElementById("currentStateSummary"),
   setSelect: document.getElementById("setSelect"),
@@ -40,6 +41,7 @@ const el = {
   graphViewport: document.getElementById("graphViewport"),
   graphFlowSummary: document.getElementById("graphFlowSummary"),
   tooltip: document.getElementById("tooltip"),
+  topSplitter: document.getElementById("topSplitter"),
   splitter: document.getElementById("splitter"),
   drawer: document.getElementById("drawer"),
   drawerMode: document.getElementById("drawerMode"),
@@ -77,6 +79,7 @@ const state = {
   sourceUrl: null,
   storageKey: null,
   drawerWidth: 520,
+  processHeight: 190,
   docsManifest: null,
   docsContentByPath: {},
   selectedDocPath: null,
@@ -1907,6 +1910,22 @@ function applyDrawerWidth(width, persist = false) {
   return next;
 }
 
+function clampProcessHeight(height) {
+  const minHeight = 96;
+  const maxHeight = Math.max(minHeight, Math.floor(window.innerHeight * 0.42));
+  return Math.max(minHeight, Math.min(maxHeight, Math.round(height)));
+}
+
+function applyProcessHeight(height, persist = false) {
+  const next = clampProcessHeight(height);
+  state.processHeight = next;
+  document.documentElement.style.setProperty("--process-height", `${next}px`);
+  if (persist) {
+    saveUiPrefs({ ...(loadUiPrefs() || {}), processHeight: next });
+  }
+  return next;
+}
+
 function scheduleRender() {
   if (state.renderFrame) return;
   state.renderFrame = requestAnimationFrame(() => {
@@ -3261,10 +3280,34 @@ function draftValidationErrors() {
   return errors;
 }
 
+function normalizeComparableText(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function getPreferredHierarchyRootProjectId(projects = []) {
+  const graphNodeRef = state.server?.meta_window?.graph?.nodes?.find((node) => node?.project_ref)?.project_ref || null;
+  if (graphNodeRef && projects.some((project) => project?.identity_and_role?.project_id === graphNodeRef)) {
+    return graphNodeRef;
+  }
+  const selectedLabel = normalizeComparableText(state.selectedSetLabel || state.config?.app_title || "");
+  const byLabel = projects.find((project) => {
+    const projectId = normalizeComparableText(project?.identity_and_role?.project_id);
+    const projectName = normalizeComparableText(project?.identity_and_role?.name);
+    return Boolean(selectedLabel) && (projectId === selectedLabel || projectName === selectedLabel);
+  });
+  if (byLabel) return byLabel.identity_and_role.project_id;
+  const hubRole = projects.find((project) => /hub/i.test(project?.identity_and_role?.role || ""));
+  if (hubRole) return hubRole.identity_and_role.project_id;
+  const compass = projects.find((project) => project?.identity_and_role?.project_id === "compass");
+  if (compass) return compass.identity_and_role.project_id;
+  return projects[0]?.identity_and_role?.project_id || "compass";
+}
+
 function getGlobalOverview() {
+  const rootProjectId = getPreferredHierarchyRootProjectId(state.server?.projects || []);
+  const hubLabel = state.server?.projects?.find((project) => project?.identity_and_role?.project_id === rootProjectId)?.identity_and_role?.name || state.selectedSetLabel || state.config?.app_title || "Project";
   const fallbackSteps = [
-    "Keep the financial ingestion chain healthy: Isracard Mail → Mail Manager → Economic Manager.",
-    "Keep the Compass hub balanced across finance and non-finance subprojects.",
+    `Keep the ${hubLabel} hub balanced across its subprojects.`,
     "Open any project or edge to update its roadmap, APIs, and commit template.",
   ];
   const overview = state.server?.meta_window?.overview || {};
@@ -3272,7 +3315,7 @@ function getGlobalOverview() {
     status: overview.status || state.server?.meta_window?.health?.status || "unknown",
     summary:
       overview.summary ||
-      "Compass is the active hub for both financial and non-financial subprojects. Use the drawer to update project details, APIs, roadmap items, and commit instructions.",
+      `${hubLabel} is the active hub for this set. Use the drawer to update project details, APIs, roadmap items, and commit instructions.`,
     next_steps: Array.isArray(overview.next_steps) && overview.next_steps.length ? overview.next_steps : fallbackSteps,
     document_url: overview.document_url || "docs/project-overview.md",
   };
@@ -3620,22 +3663,23 @@ function buildHierarchyProjectNode(project) {
 
 function buildHierarchyTree(projects = []) {
   const byId = new Map((projects || []).map((project) => [project?.identity_and_role?.project_id, project]).filter(([id]) => Boolean(id)));
-  const rootProject = byId.get("compass");
+  const rootProjectId = getPreferredHierarchyRootProjectId(projects);
+  const rootProject = byId.get(rootProjectId) || byId.get("compass") || projects[0] || null;
   const root = {
-    id: "compass",
-    label: rootProject?.identity_and_role?.name || "Compass",
-    project_ref: "compass",
+    id: rootProjectId || "compass",
+    label: rootProject?.identity_and_role?.name || state.selectedSetLabel || state.config?.app_title || "Compass",
+    project_ref: rootProjectId || "compass",
     kind: "root",
     status: rootProject?.identity_and_role?.operational_status || "active",
     role: rootProject?.identity_and_role?.role || "Platform hub",
-    description: rootProject?.identity_and_role?.description || "Compass orchestration hub.",
+    description: rootProject?.identity_and_role?.description || `${rootProject?.identity_and_role?.name || state.selectedSetLabel || "Project"} orchestration hub.`,
     has_children: true,
     children: [],
   };
 
   const orderedIds = ["gpt", "isracard_mail", "mail_manager", "assessment", "self_manager", "administrative", "economic_manager", "rules_engine"];
   const rest = (projects || [])
-    .filter((project) => project?.identity_and_role?.project_id && project.identity_and_role.project_id !== "compass")
+    .filter((project) => project?.identity_and_role?.project_id && project.identity_and_role.project_id !== root.id)
     .sort((a, b) => {
       const ai = orderedIds.indexOf(a.identity_and_role.project_id);
       const bi = orderedIds.indexOf(b.identity_and_role.project_id);
@@ -3809,10 +3853,13 @@ function renderNetworkGraph(options = {}) {
   const hierarchyNodes = [fullRoot];
   const hierarchyLinks = [];
   const positionMap = new Map();
+  const rootId = hierarchyNodeKey(fullRoot);
+  positionMap.set(rootId, { x: rootCenter.x, y: rootCenter.y });
   positionMap.set("compass", { x: rootCenter.x, y: rootCenter.y });
 
-  const rootOffset = getOffset("compass");
+  const rootOffset = getOffset(rootId);
   const rootDisplay = { x: rootCenter.x + rootOffset.dx, y: rootCenter.y + rootOffset.dy };
+  positionMap.set(rootId, rootDisplay);
   positionMap.set("compass", rootDisplay);
 
   const rootChildren = fullRoot.children || [];
@@ -4420,7 +4467,13 @@ function wireGlobalActions() {
   } else {
     document.documentElement.style.setProperty("--drawer-width", `${state.drawerWidth}px`);
   }
+  if (initialUiPrefs.processHeight) {
+    applyProcessHeight(initialUiPrefs.processHeight, false);
+  } else {
+    document.documentElement.style.setProperty("--process-height", `${state.processHeight}px`);
+  }
   wireSplitLayoutActions();
+  wireUpperSplitLayoutActions();
   el.refreshButton.addEventListener("click", async () => {
     await bootstrap(true);
   });
@@ -4462,6 +4515,7 @@ function wireGlobalActions() {
   });
   window.addEventListener("resize", () => {
     applyDrawerWidth(state.drawerWidth, false);
+    applyProcessHeight(state.processHeight, false);
     if (state.server) render();
   });
   el.graphViewport.addEventListener("click", (event) => {
@@ -4536,6 +4590,75 @@ function wireSplitLayoutActions() {
       lastWidth = applyDrawerWidth(520, true);
       el.splitter.setAttribute("aria-valuenow", String(lastWidth));
       scheduleRender();
+      event.preventDefault();
+    }
+  });
+}
+
+function wireUpperSplitLayoutActions() {
+  if (!el.topSplitter || el.topSplitter.dataset.bound === "true") return;
+  el.topSplitter.dataset.bound = "true";
+  el.topSplitter.setAttribute("aria-valuemin", "96");
+  el.topSplitter.setAttribute("aria-valuemax", String(Math.max(96, Math.floor(window.innerHeight * 0.42))));
+  el.topSplitter.setAttribute("aria-valuenow", String(state.processHeight));
+
+  let dragging = false;
+  let startY = 0;
+  let startHeight = state.processHeight;
+  let lastHeight = state.processHeight;
+
+  const finishDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove("splitter-dragging");
+    applyProcessHeight(lastHeight, true);
+    if (state.server) render();
+    window.removeEventListener("pointermove", handleMove);
+    window.removeEventListener("pointerup", finishDrag);
+    window.removeEventListener("pointercancel", finishDrag);
+  };
+
+  const handleMove = (event) => {
+    if (!dragging) return;
+    lastHeight = applyProcessHeight(startHeight + (event.clientY - startY), false);
+    el.topSplitter.setAttribute("aria-valuenow", String(lastHeight));
+    if (state.server) render();
+  };
+
+  el.topSplitter.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    dragging = true;
+    startY = event.clientY;
+    startHeight = state.processHeight;
+    document.body.classList.add("splitter-dragging");
+    el.topSplitter.setAttribute("aria-valuenow", String(startHeight));
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", finishDrag, { once: true });
+    window.addEventListener("pointercancel", finishDrag, { once: true });
+    event.preventDefault();
+  });
+
+  el.topSplitter.addEventListener("dblclick", () => {
+    const nextHeight = applyProcessHeight(190, true);
+    el.topSplitter.setAttribute("aria-valuenow", String(nextHeight));
+    if (state.server) render();
+  });
+
+  el.topSplitter.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowUp") {
+      const nextHeight = applyProcessHeight(state.processHeight - 24, true);
+      el.topSplitter.setAttribute("aria-valuenow", String(nextHeight));
+      if (state.server) render();
+      event.preventDefault();
+    } else if (event.key === "ArrowDown") {
+      const nextHeight = applyProcessHeight(state.processHeight + 24, true);
+      el.topSplitter.setAttribute("aria-valuenow", String(nextHeight));
+      if (state.server) render();
+      event.preventDefault();
+    } else if (event.key === "Home") {
+      const nextHeight = applyProcessHeight(190, true);
+      el.topSplitter.setAttribute("aria-valuenow", String(nextHeight));
+      if (state.server) render();
       event.preventDefault();
     }
   });
@@ -4628,6 +4751,7 @@ async function bootstrap(forceReload = false) {
   }
 
   el.validationSummary.textContent = "";
+  wireUpperSplitLayoutActions();
   render();
 }
 

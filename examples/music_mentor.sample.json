@@ -134,7 +134,17 @@
         "priority": "medium",
         "status": "planned"
       }
-    ]
+    ],
+    "overview": {
+      "status": "healthy",
+      "summary": "Music Mentor is the active hub for lesson planning, practice feedback, and progress summaries.",
+      "next_steps": [
+        "Keep practice logs flowing into Lesson Planner.",
+        "Keep lesson plans readable and short enough for daily practice.",
+        "Use the drawer to update project details, docs, and exports."
+      ],
+      "document_url": "docs/project-overview.md"
+    }
   },
   "projects": [
     {

@@ -9,7 +9,7 @@
   </head>
   <body>
     <div id="appShell" class="app-shell">
-      <header class="topbar">
+      <header id="topbar" class="topbar">
         <div class="topbar__left">
           <div class="eyebrow">Plan Graph</div>
           <h1 id="appTitle">Ecosystem Interactive Control & Living Architecture Hub</h1>
@@ -47,9 +47,11 @@
       </header>
 
 
-      <section class="process-visualization" aria-label="Process continuation">
+      <section id="processVisualization" class="process-visualization" aria-label="Process continuation">
         <div id="stepExplanation" class="step-explanation"></div>
       </section>
+
+      <div id="topSplitter" class="top-splitter" role="separator" aria-orientation="horizontal" aria-label="Resize the upper panel"></div>
 
       <main class="workspace">
         <section class="graph-panel graph-panel--compass">
