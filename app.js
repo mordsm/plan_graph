@@ -48,6 +48,7 @@ const el = {
   drawerTitle: document.getElementById("drawerTitle"),
   drawerRevision: document.getElementById("drawerRevision"),
   drawerBaseRevision: document.getElementById("drawerBaseRevision"),
+  drawerSnapshot: document.getElementById("drawerSnapshot"),
   drawerTabs: document.getElementById("drawerTabs"),
   drawerBody: document.getElementById("drawerBody"),
   closeDrawerButton: document.getElementById("closeDrawerButton"),
