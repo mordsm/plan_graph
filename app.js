@@ -2539,10 +2539,14 @@ function setDrawerOpen(open) {
 function selectSection(section) {
   state.activeSection = section;
   [...el.drawerTabs.querySelectorAll(".tab")].forEach((button) => {
-    button.classList.toggle("active", button.dataset.section === section);
+    const isActive = button.dataset.section === section;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", String(isActive));
   });
   [...el.drawerBody.querySelectorAll(".section-card")].forEach((sectionEl) => {
-    sectionEl.classList.toggle("active", sectionEl.dataset.section === section);
+    const isActive = sectionEl.dataset.section === section;
+    sectionEl.classList.toggle("active", isActive);
+    sectionEl.hidden = !isActive;
   });
   el.drawerBody.scrollTop = 0;
 }
@@ -2638,16 +2642,33 @@ function navigateToSet(setKey) {
   url.searchParams.set("set", setKey);
   window.location.href = url.toString();
 }
+function renderDrawerSnapshot(projectOverview) {
+  if (!el.drawerSnapshot) return;
+  const nextSteps = Array.isArray(projectOverview?.next_steps) ? projectOverview.next_steps.slice(0, 3) : [];
+  el.drawerSnapshot.innerHTML = `
+    <div class="drawer-snapshot__status" data-health="${escapeHtml(projectOverview?.status || "unknown")}">
+      ${escapeHtml(getHealthDisplayLabel(projectOverview?.status || "unknown"))}
+    </div>
+    <div class="drawer-snapshot__summary">${escapeHtml(projectOverview?.summary || "")}</div>
+    <div class="drawer-snapshot__steps">
+      ${nextSteps.length ? nextSteps.map((step) => `<span class="drawer-snapshot__step">${escapeHtml(step)}</span>`).join("") : `<span class="drawer-snapshot__empty">No next steps.</span>`}
+    </div>
+  `;
+}
+
 function renderDrawerProject(project, mode = "edit") {
   const identity = project.identity_and_role;
   const flows = project.interfaces_and_flows;
   const scheduler = project.scheduler;
-  const roadmap = project.roadmap_and_tasks;
+  const roadmap = project.roadmap_and_tasks || [];
+
   const exportCommit = project.export_and_commit;
   const overview = getGlobalOverview();
   const projectOverview = getProjectOverview(project);
+  renderDrawerSnapshot(projectOverview);
   const overviewSteps = overview.next_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
   const projectNextSteps = projectOverview.next_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
+
   const apiCards = flows.external_apis.length ? flows.external_apis.map((api) => formatApiCard(api)).join("") : `<div class="empty-note">No external APIs configured yet.</div>`;
   const taskSummaryCards = roadmap.length ? roadmap.map((task) => formatTaskSummary(task)).join("") : `<div class="empty-note">No roadmap items yet.</div>`;
 
@@ -2866,11 +2887,17 @@ function renderDrawerProject(project, mode = "edit") {
   `;
 
   el.drawerTabs.style.display = "";
-  selectSection(state.activeSection);
+  selectSection(state.activeSection || "overview");
   wireDrawerInputs();
 }
 
 function renderDrawerEdge(edge) {
+  if (el.drawerSnapshot) {
+    el.drawerSnapshot.innerHTML = `
+      <div class="drawer-snapshot__status" data-health="${escapeHtml(edge.status || "unknown")}">${escapeHtml(getHealthDisplayLabel(edge.status || "unknown"))}</div>
+      <div class="drawer-snapshot__summary">${escapeHtml(edge.label || edge.edge_id || "Edge inspector")}</div>
+    `;
+  }
   el.drawerBody.innerHTML = `
     <section class="section-card active" data-section="identity_and_role">
       <div class="form-grid">
@@ -2922,6 +2949,7 @@ function renderDrawerEdge(edge) {
     </section>
   `;
   el.drawerTabs.style.display = "none";
+  if (el.drawerSnapshot) el.drawerSnapshot.innerHTML = "";
   wireDrawerInputs();
 }
 
@@ -2949,6 +2977,10 @@ function renderDrawer() {
 }
 
 function wireDrawerInputs() {
+  el.drawerTabs.querySelectorAll('.tab').forEach((button) => {
+    button.onclick = () => selectSection(button.dataset.section || 'overview');
+  });
+
   el.drawerBody.querySelectorAll("[data-path]").forEach((input) => {
     const isCheckbox = input.type === "checkbox";
     const eventName = isCheckbox ? "change" : "input";
