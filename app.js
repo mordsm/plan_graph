@@ -71,7 +71,7 @@ const state = {
   draftNodeType: "project",
   selectedNodeId: null,
   selectedEdgeId: null,
-  activeSection: "identity_and_role",
+  activeSection: "overview",
   simulation: null,
   zoom: null,
   resizeObserver: null,
@@ -101,6 +101,7 @@ const state = {
 };
 
 const PROJECT_SECTIONS = [
+  "overview",
   "identity_and_role",
   "interfaces_and_flows",
   "scheduler",
@@ -2540,9 +2541,9 @@ function selectSection(section) {
     button.classList.toggle("active", button.dataset.section === section);
   });
   [...el.drawerBody.querySelectorAll(".section-card")].forEach((sectionEl) => {
-    if (!PROJECT_SECTIONS.includes(sectionEl.dataset.section)) return;
     sectionEl.classList.toggle("active", sectionEl.dataset.section === section);
   });
+  el.drawerBody.scrollTop = 0;
 }
 
 function findProjectIndex(projectId) {
@@ -2857,6 +2858,7 @@ function renderDrawerProject(project, mode = "edit") {
     </section>
   `;
 
+  el.drawerTabs.style.display = "";
   selectSection(state.activeSection);
   wireDrawerInputs();
 }
@@ -2912,7 +2914,7 @@ function renderDrawerEdge(edge) {
       </div>
     </section>
   `;
-  el.drawerTabs.querySelectorAll(".tab").forEach((button) => button.classList.toggle("active", button.dataset.section === "identity_and_role"));
+  el.drawerTabs.style.display = "none";
   wireDrawerInputs();
 }
 
@@ -4707,6 +4709,7 @@ async function bootstrap(forceReload = false) {
   state.availableSets = manifest?.sets || [];
   state.selectedSetKey = selectedSet?.key || boot.querySet || rootConfig.default_set || manifest?.default_set || null;
   state.selectedSetLabel = selectedSet?.label || selectedSet?.key || state.selectedSetKey;
+  try { if (state.selectedSetKey) localStorage.setItem(SELECTED_SET_STORAGE_KEY, state.selectedSetKey); } catch {}
     state.config = config;
     state.configUrl = configUrl;
 

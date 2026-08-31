@@ -38,12 +38,13 @@
         </div>
         <div class="topbar__right">
           <div class="set-switcher">
-            <label for="setSelect">Set</label>
-            <select id="setSelect" aria-label="Project set"></select>
+            <label for="setSelect">Network</label>
+            <select id="setSelect" aria-label="Project network"></select>
           </div>
           <button id="refreshButton" class="ghost">Reload</button>
           <button id="addProjectButton" class="primary">Add Project/Agent</button>
         </div>
+
       </header>
 
 
@@ -84,7 +85,8 @@
           </div>
 
           <div class="drawer__tabs" id="drawerTabs">
-            <button class="tab active" data-section="identity_and_role">Identity</button>
+            <button class="tab active" data-section="overview">Overview</button>
+            <button class="tab" data-section="identity_and_role">Identity</button>
             <button class="tab" data-section="interfaces_and_flows">Flows</button>
             <button class="tab" data-section="scheduler">Scheduler</button>
             <button class="tab" data-section="roadmap_and_tasks">Tasks</button>

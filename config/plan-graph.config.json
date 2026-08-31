@@ -5,5 +5,5 @@
   "default_view": "meta-window",
   "allow_state_query_param": true,
   "set_manifest": "sets/index.json",
-  "default_set": "music_mentor"
+  "default_set": "compass-core"
 }
