@@ -2645,13 +2645,19 @@ function navigateToSet(setKey) {
 function renderDrawerSnapshot(projectOverview) {
   if (!el.drawerSnapshot) return;
   const nextSteps = Array.isArray(projectOverview?.next_steps) ? projectOverview.next_steps.slice(0, 3) : [];
+  const statusText = getHealthDisplayLabel(projectOverview?.status || "unknown");
   el.drawerSnapshot.innerHTML = `
-    <div class="drawer-snapshot__status" data-health="${escapeHtml(projectOverview?.status || "unknown")}">
-      ${escapeHtml(getHealthDisplayLabel(projectOverview?.status || "unknown"))}
+    <div class="drawer-snapshot__title">Project snapshot</div>
+    <div class="drawer-snapshot__row">
+      <span class="drawer-snapshot__label">Status</span>
+      <span class="drawer-snapshot__status" data-health="${escapeHtml(projectOverview?.status || "unknown")}">${escapeHtml(statusText)}</span>
     </div>
     <div class="drawer-snapshot__summary">${escapeHtml(projectOverview?.summary || "")}</div>
-    <div class="drawer-snapshot__steps">
-      ${nextSteps.length ? nextSteps.map((step) => `<span class="drawer-snapshot__step">${escapeHtml(step)}</span>`).join("") : `<span class="drawer-snapshot__empty">No next steps.</span>`}
+    <div class="drawer-snapshot__row drawer-snapshot__row--stacked">
+      <span class="drawer-snapshot__label">Next steps</span>
+      <div class="drawer-snapshot__steps">
+        ${nextSteps.length ? nextSteps.map((step) => `<span class="drawer-snapshot__step">${escapeHtml(step)}</span>`).join("") : `<span class="drawer-snapshot__empty">No next steps.</span>`}
+      </div>
     </div>
   `;
 }
