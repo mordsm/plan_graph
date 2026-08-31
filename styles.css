@@ -1031,13 +1031,16 @@ body.splitter-dragging .splitter {
 }
 .node text {
   fill: #10223e;
-  font-size: 12px;
+  font-size: 13px;
   text-anchor: middle;
   paint-order: stroke;
   stroke: rgba(255,255,255,0.95);
   stroke-width: 3px;
   stroke-linejoin: round;
 }
+.tree-node__label { font-size: 13px; font-weight: 700; }
+.tree-node__meta { font-size: 10px; }
+.tree-node__toggle { font-size: 12px; font-weight: 900; }
 .link-line {
   stroke: rgba(37, 99, 235, 0.86);
   stroke-width: 0.65px;
@@ -1049,7 +1052,7 @@ body.splitter-dragging .splitter {
   cursor: pointer;
 }
 .edge-badge {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.02em;
   fill: #0f172a;
@@ -1061,9 +1064,24 @@ body.splitter-dragging .splitter {
 }
 .edge-badge__title { display: block; }
 .edge-badge__meta { fill: var(--muted); font-size: 8.5px; font-weight: 600; letter-spacing: 0.04em; }
-.node.selected circle {
-  stroke: #f8fafc;
-  stroke-width: 2.6px;
+.tree-node.selected rect,
+.tree-node.selected circle,
+.tree-node--project.is-process-focus circle,
+.tree-node--agent.is-process-focus circle,
+.tree-node--external_system.is-process-focus circle,
+.tree-node--root.is-process-focus circle {
+  stroke: rgba(37, 99, 235, 0.95);
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 0 8px rgba(37, 99, 235, 0.12)) drop-shadow(0 8px 14px rgba(37, 99, 235, 0.18));
+}
+.tree-node__box.is-process-focus {
+  fill: rgba(219, 234, 254, 0.96);
+  stroke: rgba(37, 99, 235, 0.34);
+  stroke-width: 2px;
+}
+.tree-node.selected .tree-node__box {
+  stroke: rgba(37, 99, 235, 0.7);
+  stroke-width: 2px;
 }
 .edge-group.selected .link-line {
   stroke: #0f172a;

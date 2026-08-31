@@ -2333,6 +2333,7 @@ function renderProcessOverlay(layer, positionMap) {
 
   const processLayer = layer.append("g").attr("class", "process-overlay");
   const activeNodes = new Set([step.node, previous.node]);
+  state.processFocusNodeIds = activeNodes;
   processLayer
     .selectAll("circle.process-node-pulse")
     .data([...activeNodes].map((id) => ({ id, position: positionMap.get(id) })).filter((item) => item.position))
@@ -2340,7 +2341,7 @@ function renderProcessOverlay(layer, positionMap) {
     .attr("class", (d) => `process-node-pulse${d.id === step.node ? " active" : ""}`)
     .attr("cx", (d) => d.position.x)
     .attr("cy", (d) => d.position.y)
-    .attr("r", (d) => (d.id === step.node ? 42 : 30));
+    .attr("r", (d) => (d.id === step.node ? 48 : 34));
 
   if (previousPosition && previous.node !== step.node) {
     processLayer
@@ -3608,12 +3609,8 @@ function getGraphData() {
   return { nodes, links };
 }
 const HIERARCHY_GROUPS = [
-  { id: "sources", label: "Sources", projectIds: ["isracard_mail"] },
-  { id: "mail", label: "Mail", projectIds: ["mail_manager"] },
-  { id: "economic", label: "Economic", projectIds: ["economic_manager"] },
-  { id: "self_management", label: "Self Management", projectIds: ["self_manager"] },
-  { id: "assessment", label: "Assessment", projectIds: ["assessment"] },
-  { id: "administrative", label: "Administrative", projectIds: ["administrative"] },
+  { id: "finance_comms", label: "Finance / Comms", projectIds: ["isracard_mail", "mail_manager", "economic_manager", "rules_engine"] },
+  { id: "ops_review", label: "Assessment / Self management", projectIds: ["assessment", "self_manager", "administrative", "task_commander"] },
 ];
 
 const HIERARCHY_BRANCH_DIRECTIONS = {
@@ -3648,11 +3645,13 @@ function branchDistanceFor(node) {
   return 310 + Math.max(0, depth - 1) * 54;
 }
 
-const ECONOMIC_PROJECT_IDS = new Set(["economic_manager", "rules_engine"]);
-const NON_ECONOMIC_PROJECT_IDS = new Set(["gpt", "isracard_mail", "mail_manager", "assessment", "self_manager", "administrative"]);
+const FINANCE_PROJECT_IDS = new Set(["economic_manager", "rules_engine", "mail_manager", "isracard_mail"]);
+const OPS_PROJECT_IDS = new Set(["assessment", "self_manager", "administrative", "task_commander"]);
 
 function clusterSideFor(projectId) {
-  return ECONOMIC_PROJECT_IDS.has(projectId) ? "economic" : "other";
+  if (FINANCE_PROJECT_IDS.has(projectId)) return "finance";
+  if (OPS_PROJECT_IDS.has(projectId)) return "ops";
+  return "finance";
 }
 
 function classifyHierarchyProject(project) {
@@ -3707,7 +3706,7 @@ function buildHierarchyTree(projects = []) {
     children: [],
   };
 
-  const orderedIds = ["gpt", "isracard_mail", "mail_manager", "assessment", "self_manager", "administrative", "economic_manager", "rules_engine"];
+  const orderedIds = ["gpt", "isracard_mail", "mail_manager", "assessment", "self_manager", "administrative", "task_commander", "economic_manager", "rules_engine"];
   const rest = (projects || [])
     .filter((project) => project?.identity_and_role?.project_id && project.identity_and_role.project_id !== root.id)
     .sort((a, b) => {
@@ -3776,13 +3775,13 @@ function treeNodeMetrics(node) {
   const labelLen = String(node?.data?.label || "").length;
   const roleLen = String(node?.data?.role || "").length;
   const textWidth = Math.max(labelLen * 7.2, roleLen * 5.7);
-  const width = Math.min(420, Math.max(180, Math.ceil(textWidth + 56)));
-  const height = roleLen ? 60 : 46;
-  if (kind === "root") return { width: Math.max(260, width), height: 68, rx: 20 };
-  if (kind === "external_system") return { width: Math.max(220, width), height: 50, rx: 14 };
-  if (kind === "agent") return { width: Math.max(220, width), height: 50, rx: 14 };
-  if (hasChildren) return { width: Math.max(230, width), height, rx: 14 };
-  return { width, height, rx: 14 };
+  const width = Math.min(460, Math.max(220, Math.ceil(textWidth + 64)));
+  const height = roleLen ? 66 : 52;
+  if (kind === "root") return { width: Math.max(320, width), height: 76, rx: 20 };
+  if (kind === "external_system") return { width: Math.max(260, width), height: 58, rx: 14 };
+  if (kind === "agent") return { width: Math.max(260, width), height: 58, rx: 14 };
+  if (hasChildren) return { width: Math.max(260, width), height, rx: 14 };
+  return { width: Math.max(240, width), height, rx: 14 };
 }
 
 function renderNodeContents(selection) {
@@ -3797,12 +3796,17 @@ function renderNodeContents(selection) {
     const label = d?.data?.label || "Node";
     const role = d?.data?.role || "";
 
+    const isFocused = Boolean(state.processFocusNodeIds?.has(d?.data?.project_ref) || state.processFocusNodeIds?.has(d?.data?.id));
+    const boost = isFocused ? 1.18 : 1;
+    const boxWidth = metrics.width * boost;
+    const boxHeight = metrics.height * boost;
+
     node.append("rect")
-      .attr("class", "tree-node__box")
-      .attr("x", -metrics.width / 2)
-      .attr("y", -metrics.height / 2)
-      .attr("width", metrics.width)
-      .attr("height", metrics.height)
+      .attr("class", `tree-node__box${isFocused ? " is-process-focus" : ""}`)
+      .attr("x", -boxWidth / 2)
+      .attr("y", -boxHeight / 2)
+      .attr("width", boxWidth)
+      .attr("height", boxHeight)
       .attr("rx", metrics.rx)
       .attr("ry", metrics.rx);
 
@@ -3879,7 +3883,7 @@ function renderNetworkGraph(options = {}) {
     currentOffsets[id] = next;
   };
 
-  const treeLayout = d3.tree().nodeSize([132, 280]).separation((a, b) => (a.parent === b.parent ? 1.16 : 1.42));
+  const treeLayout = d3.tree().nodeSize([144, 250]).separation((a, b) => (a.parent === b.parent ? 1.28 : 1.58));
   const hierarchyNodes = [fullRoot];
   const hierarchyLinks = [];
   const positionMap = new Map();
@@ -3894,23 +3898,23 @@ function renderNetworkGraph(options = {}) {
 
   const rootChildren = fullRoot.children || [];
   const rootGroups = {
-    other: rootChildren.filter((child) => clusterSideFor(child.data.project_ref) === "other"),
-    economic: rootChildren.filter((child) => clusterSideFor(child.data.project_ref) === "economic"),
+    finance: rootChildren.filter((child) => clusterSideFor(child.data.project_ref) === "finance"),
+    ops: rootChildren.filter((child) => clusterSideFor(child.data.project_ref) === "ops"),
   };
-  const laneSpacingY = 260;
-  const laneSpacingX = 560;
+  const laneSpacingY = 220;
+  const laneSpacingX = 430;
   const lanes = {
-    other: {
-      direction: normalizeVector({ vx: -1, vy: 0 }),
-      perp: { vx: 0, vy: 1 },
-      x: rootDisplay.x - laneSpacingX,
-      startY: rootDisplay.y - ((rootGroups.other.length - 1) * laneSpacingY) / 2,
-    },
-    economic: {
-      direction: normalizeVector({ vx: 1, vy: 0 }),
-      perp: { vx: 0, vy: 1 },
+    finance: {
+      direction: normalizeVector({ vx: 1, vy: -0.08 }),
+      perp: { vx: 0.08, vy: 1 },
       x: rootDisplay.x + laneSpacingX,
-      startY: rootDisplay.y - ((rootGroups.economic.length - 1) * laneSpacingY) / 2,
+      startY: rootDisplay.y - ((rootGroups.finance.length - 1) * laneSpacingY) / 2,
+    },
+    ops: {
+      direction: normalizeVector({ vx: -1, vy: 0.08 }),
+      perp: { vx: -0.08, vy: 1 },
+      x: rootDisplay.x - laneSpacingX,
+      startY: rootDisplay.y - ((rootGroups.ops.length - 1) * laneSpacingY) / 2,
     },
   };
 
@@ -3938,8 +3942,10 @@ function renderNetworkGraph(options = {}) {
       const nextOffset = { dx: cumulativeOffset.dx + nodeOffset.dx, dy: cumulativeOffset.dy + nodeOffset.dy };
       const baseX = rootBranchOrigin.x + direction.vx * node.y + perp.vx * node.x;
       const baseY = rootBranchOrigin.y + direction.vy * node.y + perp.vy * node.x;
+      const focusBoost = state.processFocusNodeIds?.has(key) ? 1.08 : 1;
       const display = { x: baseX + nextOffset.dx, y: baseY + nextOffset.dy };
       node.__display = display;
+      node.__focusBoost = focusBoost;
       positionMap.set(key, display);
       hierarchyNodes.push(node);
       if (node.children?.length) node.children.forEach((childNode) => walk(childNode, nextOffset));
@@ -3969,6 +3975,11 @@ function renderNetworkGraph(options = {}) {
   );
 
   const svg = d3.select(el.graphSvg);
+  const processScenario = getActiveScenario();
+  const processStepIndex = clampProcessStep(state.process.currentStep);
+  const processStep = processScenario.steps[processStepIndex];
+  const processPrev = processScenario.steps[clampProcessStep(state.process.previousStep)];
+  state.processFocusNodeIds = new Set([processStep?.node, processPrev?.node].filter(Boolean));
   svg.selectAll("*").remove();
   svg.attr("viewBox", `0 0 ${width} ${height}`);
   svg.insert("rect", ":first-child").attr("class", "graph-pan-capture").attr("x", 0).attr("y", 0).attr("width", width).attr("height", height);
