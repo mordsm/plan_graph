@@ -2644,9 +2644,12 @@ function renderDrawerProject(project, mode = "edit") {
   const roadmap = project.roadmap_and_tasks;
   const exportCommit = project.export_and_commit;
   const overview = getGlobalOverview();
+  const projectOverview = getProjectOverview(project);
   const overviewSteps = overview.next_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
+  const projectNextSteps = projectOverview.next_steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("");
   const apiCards = flows.external_apis.length ? flows.external_apis.map((api) => formatApiCard(api)).join("") : `<div class="empty-note">No external APIs configured yet.</div>`;
   const taskSummaryCards = roadmap.length ? roadmap.map((task) => formatTaskSummary(task)).join("") : `<div class="empty-note">No roadmap items yet.</div>`;
+
   const docEntries = getDocEntries();
   const selectedDocPath = getSelectedDocPath();
   const selectedDoc = docEntries.find((doc) => doc.path === selectedDocPath) || docEntries[0] || { path: selectedDocPath, label: selectedDocPath, description: "" };
@@ -2695,14 +2698,16 @@ function renderDrawerProject(project, mode = "edit") {
       <div class="overview-top">
         <div>
           <div class="panel-kicker">Project Overview</div>
-          <h3>Whole-project status</h3>
+          <h3>${escapeHtml(identity.name || identity.project_id || "Project")}</h3>
         </div>
-        <div class="overview-status" data-health="${escapeHtml(overview.status)}">${escapeHtml(getHealthDisplayLabel(overview.status))}</div>
+        <div class="overview-status" data-health="${escapeHtml(projectOverview.status)}">${escapeHtml(getHealthDisplayLabel(projectOverview.status))}</div>
       </div>
-      <p class="overview-summary">${escapeHtml(overview.summary)}</p>
+      <p class="overview-summary">${escapeHtml(projectOverview.summary)}</p>
       <div class="overview-grid">
         <div>
-          <div class="overview-label">Document</div>
+          <div class="overview-label">Project status</div>
+          <div class="overview-status" data-health="${escapeHtml(projectOverview.status)}">${escapeHtml(getHealthDisplayLabel(projectOverview.status))}</div>
+          <div class="overview-label" style="margin-top: 12px;">Document</div>
           <a class="doc-link" href="${escapeHtml(overview.document_url)}" target="_blank" rel="noreferrer">${escapeHtml(overview.document_url)}</a>
           <div style="margin-top: 8px;">
             <button class="inline-button" type="button" data-doc-action="open-overview">Edit document</button>
@@ -2710,13 +2715,14 @@ function renderDrawerProject(project, mode = "edit") {
         </div>
         <div>
           <div class="overview-label">Next steps</div>
-          <ul class="overview-steps">${overviewSteps}</ul>
+          <ul class="overview-steps">${projectNextSteps}</ul>
           <div class="overview-add-step">
             <input class="overview-step-input" data-overview-step-input value="${escapeHtml(state.overviewStepDraft || "")}" placeholder="Add a next step..." />
             <button class="inline-button" type="button" data-overview-action="add-step">Add</button>
           </div>
         </div>
       </div>
+      <div class="array-note" style="margin-top: 12px;">Workspace overview: ${escapeHtml(overview.summary)}</div>
     </section>
 
     <section class="section-card" data-section="docs">
@@ -3323,6 +3329,28 @@ function getGlobalOverview() {
   };
 }
 
+function getProjectOverview(project) {
+  const identity = project?.identity_and_role || {};
+  const roadmap = Array.isArray(project?.roadmap_and_tasks) ? project.roadmap_and_tasks : [];
+  const rank = { urgent: 0, high: 1, medium: 2, low: 3 };
+  const openTasks = roadmap
+    .filter((task) => task && task.status && task.status !== "done")
+    .sort((a, b) => {
+      const aRank = rank[a.priority] ?? 99;
+      const bRank = rank[b.priority] ?? 99;
+      if (aRank !== bRank) return aRank - bRank;
+      return String(a.title || "").localeCompare(String(b.title || ""));
+    });
+  const projectName = identity.name || identity.project_id || "Project";
+  return {
+    status: identity.operational_status || "idle",
+    summary: identity.description || `${projectName} is currently ${identity.operational_status || "idle"}.`,
+    next_steps: openTasks.length
+      ? openTasks.slice(0, 4).map((task) => `${task.title}${task.priority ? ` · ${task.priority}` : ""}`)
+      : ["No next steps are defined yet.", "Open the Tasks tab to add roadmap items."],
+  };
+}
+
 function formatApiCard(api) {
   const name = api.endpoint_name || api.name || "API";
   const trigger = api.trigger_mode ? `trigger: ${api.trigger_mode}` : null;
@@ -3489,7 +3517,7 @@ function openProjectDrawer(projectId) {
   state.selectedNodeId = projectId;
   state.selectedEdgeId = null;
   state.draftKind = "project";
-  state.activeSection = "identity_and_role";
+  state.activeSection = "overview";
   state.original = clone(state.server.projects[index]);
   state.draft = clone(state.server.projects[index]);
   state.baseRevision = state.server.state.revision;
